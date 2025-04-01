@@ -12,6 +12,7 @@ const JwtAuthForgotPassword = Loadable(lazy(() => import('pages/auth/jwt/forgot-
 const JwtAuthResetPassword = Loadable(lazy(() => import('pages/auth/jwt/reset-password')));
 const JwtAuthCodeVerification = Loadable(lazy(() => import('pages/auth/jwt/code-verification')));
 const JwtAuthCheckMail = Loadable(lazy(() => import('pages/auth/jwt/check-mail')));
+const JwtAuthApproveMail = Loadable(lazy(() => import('pages/auth/jwt/approve-mail')));
 
 // firebase auth
 const FirebaseAuthLogin = Loadable(lazy(() => import('pages/auth/firebase/login')));
@@ -61,6 +62,7 @@ const LoginRoutes = {
             { path: 'register', element: <JwtAuthRegister /> },
             { path: 'forgot-password', element: <JwtAuthForgotPassword /> },
             { path: 'check-mail', element: <JwtAuthCheckMail /> },
+            { path: 'approve-mail', element: <JwtAuthApproveMail /> },
             { path: 'reset-password', element: <JwtAuthResetPassword /> },
             { path: 'code-verification', element: <JwtAuthCodeVerification /> }
           ]

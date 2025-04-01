@@ -27,6 +27,37 @@ import AppstoreOutlined from '@ant-design/icons/AppstoreOutlined';
 export default function DropzonePage() {
   const [list, setList] = useState(false);
 
+  // Функция для получения presigned URL
+  const getPresignedUrl = async (file) => {
+    try {
+      // Получаем токен из localStorage
+      const accessToken = localStorage.getItem('serviceToken');
+      
+      if (!accessToken) {
+        throw new Error('Authentication token not found. Please login again.');
+      }
+      
+      const response = await fetch('http://127.0.0.1:8000/api/v1/project/documents/create_s3/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `JWT ${accessToken}`
+        },
+        body: JSON.stringify({ name_aws: file.name })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch presigned URL');
+      }
+
+      const data = await response.json();
+      return { id: data.id, url: data.url, price: data.price };
+    } catch (error) {
+      console.error('Error getting presigned URL:', error);
+      throw error;
+    }
+  };
+
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>
@@ -62,6 +93,10 @@ export default function DropzonePage() {
                         setFieldValue={setFieldValue}
                         files={values.files}
                         error={touched.files && !!errors.files}
+                        onGetAction={getPresignedUrl} // Передаем функцию получения presigned URL
+                        onUploading={() => console.log('Uploading started')}
+                        onCreated={(id, price) => console.log(`File created: ID ${id}, price ${price}`)}
+                        onSuccess={() => console.log('File uploaded successfully')}
                       />
                     </Stack>
                     {touched.files && errors.files && (
@@ -69,86 +104,6 @@ export default function DropzonePage() {
                         {errors.files}
                       </FormHelperText>
                     )}
-                  </Grid>
-                </Grid>
-              </form>
-            )}
-          </Formik>
-        </MainCard>
-      </Grid>
-      <Grid item xs={12}>
-        <MainCard title="Upload Single File">
-          <Formik
-            initialValues={{ files: null }}
-            onSubmit={() => {
-              // submit form
-            }}
-            validationSchema={yup.object().shape({
-              files: yup.mixed().required('Avatar is a required.')
-            })}
-          >
-            {({ values, handleSubmit, setFieldValue, touched, errors }) => (
-              <form onSubmit={handleSubmit}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <Stack spacing={1.5} alignItems="center">
-                      <UploadSingleFile setFieldValue={setFieldValue} file={values.files} error={touched.files && !!errors.files} />
-                    </Stack>
-                    {touched.files && errors.files && (
-                      <FormHelperText error id="standard-weight-helper-text-password-login">
-                        {errors.files}
-                      </FormHelperText>
-                    )}
-                  </Grid>
-                </Grid>
-              </form>
-            )}
-          </Formik>
-        </MainCard>
-      </Grid>
-      <Grid item xs={12}>
-        <MainCard title="Upload Avatar">
-          <Formik
-            initialValues={{ files: null }}
-            onSubmit={() => {
-              // submit form
-            }}
-            validationSchema={yup.object().shape({
-              files: yup.mixed().required('Avatar is a required.')
-            })}
-          >
-            {({ values, handleSubmit, setFieldValue, touched, errors }) => (
-              <form onSubmit={handleSubmit}>
-                <Grid container spacing={3}>
-                  <Grid item xs={12}>
-                    <Stack alignItems="center">
-                      <Stack spacing={1.5} alignItems="center">
-                        <UploadAvatar setFieldValue={setFieldValue} file={values.files} error={touched.files && !!errors.files} />
-                        <Stack spacing={0}>
-                          <Typography align="center" variant="caption" color="secondary">
-                            Allowed &#39;image/*&#39;
-                          </Typography>
-                          <Typography align="center" variant="caption" color="secondary">
-                            *.png, *.jpeg, *.jpg, *.gif
-                          </Typography>
-                        </Stack>
-                      </Stack>
-                      {touched.files && errors.files && (
-                        <FormHelperText error id="standard-weight-helper-text-password-login">
-                          {errors.files}
-                        </FormHelperText>
-                      )}
-                    </Stack>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2}>
-                      <Button color="error" onClick={() => setFieldValue('files', null)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" variant="contained">
-                        Submit
-                      </Button>
-                    </Stack>
                   </Grid>
                 </Grid>
               </form>

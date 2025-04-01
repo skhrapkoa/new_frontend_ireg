@@ -109,6 +109,7 @@ const AuthForgotPassword = Loadable(lazy(() => import('pages/auth/jwt/forgot-pas
 const AuthResetPassword = Loadable(lazy(() => import('pages/auth/jwt/reset-password')));
 const AuthCheckMail = Loadable(lazy(() => import('pages/auth/jwt/check-mail')));
 const AuthCodeVerification = Loadable(lazy(() => import('pages/auth/jwt/code-verification')));
+const AuthApproveMail = Loadable(lazy(() => import('pages/auth/jwt/approve-mail')));
 
 const MaintenanceError = Loadable(lazy(() => import('pages/maintenance/404')));
 const MaintenanceError500 = Loadable(lazy(() => import('pages/maintenance/500')));
@@ -190,14 +191,14 @@ const MainRoutes = {
               ]
             },
             {
-              path: 'customer',
+              path: 'document',
               children: [
                 {
-                  path: 'customer-list',
+                  path: 'document-list',
                   element: <AppCustomerList />
                 },
                 {
-                  path: 'customer-card',
+                  path: 'document-card',
                   element: <AppCustomerCard />
                 }
               ]
@@ -555,6 +556,10 @@ const MainRoutes = {
         {
           path: 'check-mail',
           element: <AuthCheckMail />
+        },
+        {
+          path: 'approve-mail',
+          element: <AuthApproveMail />
         },
         {
           path: 'code-verification',

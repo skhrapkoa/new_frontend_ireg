@@ -57,6 +57,8 @@ export default function Profile() {
   const navigate = useNavigate();
 
   const { logout, user } = useAuth();
+  console.log('Profile')
+  console.log(user)
   const handleLogout = async () => {
     try {
       await logout();
@@ -143,9 +145,9 @@ export default function Profile() {
                         <Stack direction="row" spacing={1.25} alignItems="center">
                           <Avatar alt="profile user" src={avatar1} sx={{ width: 32, height: 32 }} />
                           <Stack>
-                            <Typography variant="h6">{user?.name}</Typography>
+                            <Typography variant="h6">{user?.get_short_fullname}</Typography>
                             <Typography variant="body2" color="text.secondary">
-                              UI/UX Designer
+
                             </Typography>
                           </Stack>
                         </Stack>

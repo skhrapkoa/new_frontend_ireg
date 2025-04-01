@@ -1,0 +1,1088 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+АПИ БЭКЭНДА
+
+DNS - https://iregpro.herokuapp.com/
+SWAGGER - https://iregpro.herokuapp.com/api/v1/swagger/
+1)Регистрация пользователя.
+
+Endpoint: api/v1/auth/users/
+Method: POST
+
+
+Body: 
+
+{
+   "email": "s.khrapko.a@gmail.com",
+   "password":"1",
+   "re_password":"2",
+   "first_name":"1",
+   "last_name":"2",
+
+   
+}
+
+
+Status OK: 201 Created.
+
+Придет письмо на почту с ссылкой для активации аккаунта. Пример
+http://127.0.0.1:8000/#/activate/MTI/bel4e2-d7066fac96415641d48f8edda0630d1d"
+Необходимо достать токен и uid из урла и сделать запрос на эндпоинт для активации аккаунта:
+
+Endpoint: /api/v1/auth/users/activation/
+Method: POST
+Body
+{
+  "token": "bg0i5p-6eba12f15f7972f48745a279080a5a9e",
+  "uid":"MQ"
+}
+
+
+
+Status OK: 204 No Content
+
+
+2) Аутентификация пользователя.
+Endpoint: /api/v1/auth/jwt/create/
+Method: POST
+
+
+Body: 
+
+{
+   "email": "test@test.com",
+   "password":"1"
+}
+
+
+Response:
+{
+   "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTY2ODAyMjI0MiwianRpIjoiNzdlOGE3M2ZkNjc0NDI4YmJmYjMyY2Y0OGViMDJiOGYiLCJ1c2VyX2lkIjoxMn0.Je3k994fCXTwntXJXCS0QQ3odSGDT4Poqw2jF3km9kw",
+   "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjY3OTM2MTQyLCJqdGkiOiIxMzFiOTdkM2QzNjg0NzkwOGI4YzYzYTI4ZGNlYWVhMSIsInVzZXJfaWQiOjEyfQ.-BFlzRVoz1hGEEAsdMy2vqFHVMqxuKF0p_12sFLAInk"
+}
+
+
+
+Status OK: 200 OK
+
+
+3)Получить Access token по refresh token.
+Endpoint: /api/v1/auth/jwt/refresh/
+Method: POST
+
+
+Body: 
+
+{
+   "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTY2ODAyMjI0MiwianRpIjoiNzdlOGE3M2ZkNjc0NDI4YmJmYjMyY2Y0OGViMDJiOGYiLCJ1c2VyX2lkIjoxMn0.Je3k994fCXTwntXJXCS0QQ3odSGDT4Poqw2jF3km9kw"
+}
+
+
+Response:
+{
+ "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjY3OTM2MTQyLCJqdGkiOiIxMzFiOTdkM2QzNjg0NzkwOGI4YzYzYTI4ZGNlYWVhMSIsInVzZXJfaWQiOjEyfQ.-BFlzRVoz1hGEEAsdMy2vqFHVMqxuKF0p_12sFLAInk"
+}
+
+
+
+Status OK: 200 OK
+
+4) Флоу Сброс пароля пароля
+
+Endpoint:api/v1/auth/users/reset_password/
+Method: POST
+Body:{
+   "email": "s.khrapko.a@gmail.com"
+}
+Response 204 No Content
+
+На почту придет ссылка 
+
+На почту придет ссылка в ней uid и токен
+Делаешь запрос на новый пароль с полученным uid и токен
+
+
+Endpoint: api/v1/auth/users/reset_password_confirm/
+Method: POST
+Body:{
+   "uid": "MTk",
+   "token": "bep8j2-160aeb2d416e292b715981e325f0fc68",
+   "new_password": "2132@!@132",
+   "re_new_password": "m312123et1995@!@132"
+}
+
+Response 204 No Content
+
+
+
+5) Смена пароля
+
+Endpoint:api/v1/auth/users/set_password/
+Method: POST
+Body:{
+   "new_password": "1",
+ "re_new_password": "1",
+ "current_password": "1",
+}
+
+
+
+6)Получить пользователя.
+
+Endpoint: http://localhost:8000/api/v1/users/me/
+В заголовке указываем токен(как пример):
+JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjY3OTM2NzU1LCJqdGkiOiIxOTAzMThjZTRiYmU0OTNkOWQwN2E0ZGMwNmEwZDY5NSIsInVzZXJfaWQiOjEyfQ.666oKTmBrO8t6i-ftMWwjsaRIlFCTd9DmlzSFLGGcYg
+
+
+Method: GET
+
+Status OK: 200 OK
+
+
+7) Получить Категории депонирования.
+
+Endpoint: api/v1/deposit_category/
+
+
+Method: GET
+
+Status OK: 200 OK.
+
+
+8) Получить Профильные направления
+
+Endpoint: api/v1/profile_direction/
+
+
+Method: GET
+
+Status OK: 200 OK.
+
+
+
+
+ФЛОУ РЕГИСТРАЦИИ
+
+
+Выбор флоу регистрации контролируем флагом is_with_team_registration
+По дефолту он False,  если мы идем по флоу “Команда и Я” тогда патчим этот флаг на True
+Endpoint: /api/v1/users/me/
+Method: Patch
+Body:{
+   "is_with_team_registration": true
+}
+
+
+
+
+
+
+Флоу “Только Я”
+
+
+
+
+1) На каждом шаге регистрации мы должны контролировать шаги полем step_self, 
+2) Шаг 1:
+Endpoint: /api/v1/users/onboarding_data/
+Method: POST
+Body:{
+ 
+   "self_step_1": ["Команда", "Соло"]
+
+
+3) На 2 шаге просто патчим юзера , если при регистрации указали имя и фамилию пред заполняем поля.
+4) На шаге 3 создаем проект для текущего юзера 
+Endpoint: api/v1/project/
+
+Method: POST
+Body:
+  {
+   "name": "test"
+}
+
+5) Шаг 4
+Endpoint: /api/v1/users/onboarding_data/
+Method: POST
+Body:{
+ 
+   "self_step_1": ["Name", "Name_2"]
+}
+
+
+Флоу “ Я и команда”
+
+
+1) На каждом шаге регистрации мы должны контролировать шаги полем step_team, 
+Шаг 1
+Endpoint: /api/v1/users/onboarding_data/
+Method: POST
+Body:{
+ 
+   "team_step_1": ["Name", "Name_2"]
+}
+
+Шаг 2
+Endpoint: /api/v1/users/onboarding_data/
+Method: POST
+Body:{
+ 
+   "team_step_2": ["1-10”]
+}
+
+
+
+3) На шаге 3 создаем проект для текущего юзера 
+Endpoint: api/v1/project/
+
+Method: POST
+Body:
+  {
+   "name": "test"
+}
+
+3) На шаге 4 создаем компанию для текущего юзера 
+Endpoint: /api/v1/legal_entity/
+
+Method: POST
+Body:
+ 
+   {
+   "inn": 3123222221
+}
+
+4) На шаге 5 Управляйте вашей командой , договорились что мы вводи емейлы пользователей, нажимаю кнопку отправить приглашения, в этот момент происходит создание юзеров, на почту приходят креды для логина. Пользователи  становятся участниками проекта, который создал текущий пользователь.
+Endpoint: /api/v1/users/send_invitations/
+
+Method: POST
+Body:
+ 
+{
+   "emails": [
+       "s.khrapk332231231233o2.a@gmail.com"
+   ]
+}
+
+Response "Приглашения успешно отправлены"
+
+5) На 6 шаге просто патчим юзера , если при регистрации указали имя и фамилию пред заполняем поля.
+
+6) Шаг 7. получаем существующие Категории депонирования(Пункт 5)
+Для того чтобы добавить для пользователя выбранные Категории депонирования
+Endpoint: /api/v1/users/me/
+Method: Patch
+Body:{
+   "deposit_categories": [1,2,3]
+}
+
+
+Обновление данных профиля
+
+Обновление профиля
+
+Endpoint:/api/v1/users/
+Method: Patch
+Body:{
+   "last_nam_eng": "321123",
+   "middle_name_eng": “132123”,
+   "first_name_eng": "sdasdsdas"
+}
+
+
+Паспорт. 
+Если у пользователя нет объекта паспорта в ответе, тогда нужно его создать.
+
+Endpoint:/api/v1/users/passport/
+Method: Post
+Body:{
+   "passport_no": "1",
+   "authority": "1",
+   "date_of_issue": "2020-10-11" 
+}
+
+Далее, если нам нужно что-то изменить в паспортных данных, делаем PATCH запрос на существующий объект паспорта.
+
+Endpoint:/api/v1/users/passport/id/
+Method: PATCH
+Body:{
+   "passport_no": "1",
+}
+
+
+Проект
+
+
+Редактировать проект
+
+
+
+
+Endpoint: api/v1/project/1/
+Method: PATCH
+Body: {
+“name”: “new_name”
+}
+Response 200 Ok
+
+
+Проверить сертификат пользователя на проекте
+
+
+
+
+Endpoint: /api/v1/project/3/user/cert/
+3 - это айдишник проекта
+
+Method: GET
+
+Response {
+   "is_cert": false
+}
+
+
+
+Компании(Юр.лица) проекта
+
+
+
+Создать компанию 
+
+Endpoint: /api/v1/legal_entity/
+Method: POST
+Body: {
+   "inn":"123sdas",
+   "short_description": "кртафыв",
+   "name": "asdads",
+   "name_eng": "name_eng",
+   "kpp": "kpp",
+   "correspondent_acc": "кореспондетский счет",
+   "rated_acc": "расчетный счет",
+   "bik": "bik",
+   "legal_entity_actual_address": "фактический адрес",
+   "legal_entity_address": "юридический адрес",
+   "email": "1@1.cim"
+
+   }
+
+Response 200 Ok
+
+Обновить данные по компании 
+
+Endpoint: /api/v1/legal_entity/1/
+Method: PATCH
+Body: {
+   "inn":"123sdas",
+   "short_description": "кртафыв"
+
+   }
+
+Response 200 Ok
+
+Получить список  компаний 
+
+Endpoint: /api/v1/legal_entity/
+Method: GET
+
+Response 200 Ok
+
+
+
+
+
+
+
+Команда
+
+Получить команду проекта
+
+Endpoint: api/v1/project/1/members/
+Method: GET
+Response [
+   {
+       "id": 2,
+       "last_name": "",
+       "first_name": "",
+       "middle_name": null,
+       "email": "a@a.com",
+       "access": "full",
+       "confidentiality": "anonymous"
+   }
+]
+
+
+
+
+
+Добавть нового члена команды
+
+
+
+Endpoint: api/v1/project/1/members/
+Method: POST
+Body: {
+   "first_name": "test",
+   "last_name": "test",
+   "middle_name": "test",
+   "email": "verbatimxp@yandex.by",
+   "role": "author",
+   "anonymise_cert": false
+}
+Response: 200 Ok
+
+
+ Получить члена команды
+
+Endpoint: /api/v1/project/1/members/1/
+Method: Get
+
+Response: {
+   "id": 1,
+   "last_name": "",
+   "first_name": "",
+   "middle_name": null,
+   "email": "s.khrapko.a@gmail.com",
+   "phone": null,
+   "avatar": "https://coach-staticfiles-staging.s3.amazonaws.com/9ee587563a78896eb90962ff06bfcf58.jpeg",
+   "last_nam_eng": "",
+   "middle_name_eng": null,
+   "first_name_eng": "sdasdsdas"
+}
+
+
+Обновить данные члена команды
+
+Endpoint: /api/v1/project/1/members/1/
+Method: PATCH
+
+Body : {
+ "last_nam_eng": "",
+   "middle_name_eng": null,
+   "first_name_eng": "sdasdsdas"
+
+}
+
+Response: {
+   "id": 1,
+   "last_name": "",
+   "first_name": "",
+   "middle_name": null,
+   "email": "s.khrapko.a@gmail.com",
+   "phone": null,
+   "avatar": "https://coach-staticfiles-staging.s3.amazonaws.com/9ee587563a78896eb90962ff06bfcf58.jpeg",
+   "last_nam_eng": "",
+   "middle_name_eng": null,
+   "first_name_eng": "sdasdsdas"
+}
+
+Удалить члена команды в проекте
+
+Endpoint: /api/v1/project/1/members/1/
+Method: DELETE
+Body 
+
+Response 204No Content
+
+Получить пермишены(доступы) в проекте
+
+
+Endpoint: /api/v1/project/1/members/1/permissions/
+Method: Get
+Response
+ {
+   "object": {
+       "edit": true,
+       "read": false,
+       "create": false,
+       "delete": false,
+       "deposit": false
+   },
+   "account": {
+       "read": false,
+       "create": true
+   },
+   "transactions": {
+       "read": false
+   }
+}
+
+
+Обновить пермишены(доступы) члена команды в проекте
+
+Тут важно всегда слать всю мапу, но с измененными полями на true или false
+Endpoint: /api/v1/project/1/members/1/permissions/
+Method: PATCH
+Body 
+
+{"object": {"edit": false, "read": false, "create": false, "delete": true, "deposit": false}, "account": {"read": true, "create": true}, "transactions": {"read": false}}
+
+Response
+ {
+   "object": {
+       "edit": true,
+       "read": false,
+       "create": false,
+       "delete": false,
+       "deposit": false
+   },
+   "account": {
+       "read": false,
+       "create": true
+   },
+   "transactions": {
+       "read": false
+   }
+}
+
+
+
+
+Документы проекта
+
+
+Получить всех пользователей и компании
+Endpoint: /api/v1/users_companies/
+Method: GET
+Response {
+   "companies": [
+       {
+           "id": 1,
+           "name": "test"
+       }
+   ],
+   "users": [
+       {
+           "id": 27,
+           "last_name": "",
+           "first_name": "",
+           "middle_name": null
+       },
+       {
+           "id": 7,
+           "last_name": "",
+           "first_name": "",
+           "middle_name": null
+       }
+   ]
+}
+
+
+
+
+
+
+Получить документы проекта
+
+Endpoint: api/v1/project/1/documents/
+Method: GET
+Response {
+   "count": 1,
+   "next": null,
+   "previous": null,
+   "results": [
+       {
+           "id": 2,
+           "name": "test",
+           "file": null,
+           "type": "certificate",
+           "members": {
+               "companies": [
+                   {
+                       "id": 1,
+                       "name": "test"
+                   },
+                   {
+                       "id": 2,
+                       "name": "test2"
+                   }
+               ],
+               "users": [
+                   {
+                       "id": 7,
+                       "last_name": "",
+                       "first_name": "",
+                       "middle_name": null
+                   },
+                   {
+                       "id": 27,
+                       "last_name": "",
+                       "first_name": "",
+                       "middle_name": null
+                   }
+               ]
+           },
+           "owner": {
+               "id": 1,
+               "name": "test"
+           },
+           "created": "2022-12-20T20:45:39.066307Z"
+       }
+   ]
+}
+
+
+
+
+Добавить документ (Сертификат)
+
+)Endpoint: api/v1/project/1/documents/
+Method: POST
+Body:  {
+“category”:1,
+   "name": "test",
+"file": file_obj(form-data),
+
+      "type": "certificate",
+   "members": {
+       "companies_ids": [1],
+       "users_ids": [7,27]
+   },
+   "owner": {
+       "companies_ids": [1], - этот если компания (users_ids: [7,27] если пользователь)
+   }
+}
+
+
+Response: 200 Ok
+
+Удалить документ в проекте
+
+Endpoint: /api/v1/project/1/documents/1/
+Method: DELETE
+Body 
+
+Response 204 No Content
+
+Скачать документ в проекте
+
+Endpoint: /api/v1/project/1/documents/1/download/
+
+Method: GET
+Response
+{
+   "file": "https://coach-staticfiles-staging.s3.amazonaws.com/main.py?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS76OCHXELXS2TYGE%2F20230112%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20230112T111454Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=0b0a9fd9cb1c7f1a5ed9f140e51467aeb7a85898d5702271b8f2f8bedb17a6b6",
+   "certificate": "https://coach-staticfiles-staging.s3.amazonaws.com/settings_local.py?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS76OCHXELXS2TYGE%2F20230112%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20230112T111454Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=c8b1c750fa7bab12375343e607ac41c903039f79ad6ed12648f522ef1434513a"
+}
+
+
+
+Обновить документ в проекте
+
+Endpoint: /api/v1/project/1/documents/1/
+Method: PATCH
+Body: {
+ "members": {
+       "companies_ids": [1],
+       "users_ids": [7, 27]
+   },
+   "owner": {
+           "companies_ids": [1],
+ИЛИ
+       "users_ids": [7, 27]
+   }
+   "name": "asd333223adsads"
+}
+
+!!!важно!!, нужно слать айдишники мемберов, которые будут после обновления
+Т/е если были 1,2 а ты хочешь добавить 3, нужно слать все 3 айдишника:
+ members = [1,2,3]
+Если удалить такая же история , к примеру хочешь оставить только 3 , шлешь 
+ members = [3]
+
+
+
+Response 200 OK
+
+
+Сортировка документов
+
+
+
+Документы сортируются через GET параметр ordering
+Endpoint: /api/v1/project/1/documents/??ordering=-id
+Если указать -(минус) перед полем , выборка отсортируется от большего к меньшему.
+Сортировать можно по любому числовому и строковому полю объекта.
+
+
+Пагинация для документов
+
+
+
+Пагинация осуществляется  через GET параметр page
+Объекты разбиваются по 10 на странице.
+Endpoint: /api/v1/project/1/documents/?page=1
+Получить категории документов
+
+Endpoint: /api/v1/categories_document/
+Method: GET
+Response 200 OK
+
+
+Новые типы для документов 
+
+Бекенд ждет строковое название константы например type:'production'
+   production = 'production', 'Произведение'
+   music_production = 'music_production', 'Музыкальное произведение'
+   prototype = 'prototype', 'Прототип (чертеж)'
+   logo = 'logo', 'Логотип'
+   literary_production = 'literary_production', 'Литературное произведение'
+   educational_material = 'educational_material', 'Учебный материал'
+   photography = 'photography', 'Фотография'
+   video = 'video', 'Видео'
+   screenplay = 'screenplay', 'Сценарий'
+   computer_program = 'computer_program', 'Программа ЭВМ'
+   character = 'character', 'Персонаж'
+   recipe = 'recipe', 'Рецептура'
+   design_image = 'design_image', 'Изображение (Дизайн)'
+   patent_material = 'patent_material', 'Материал патентной заявки'
+   technology = 'technology', 'Технология (Методика)'
+   database = 'database', 'База данных'
+   knowhow = 'knowhow', 'Ноу-хау (коммерческая тайна)'
+   sound_recording = 'sound_recording', 'Фонограмма'
+   scientific_production = 'scientific_production', 'Произведение науки'
+   scientific_educational_production = 'scientific_educational_production', 'Научно-методическое произведение'
+   customer_database = 'customer_database', 'База данных клиентов'
+   project_documentation = 'project_documentation', 'Проектная документация'
+
+
+
+Обновление английского сертификата
+
+Endpoint: /api/v1/project/3/documents/5/eng_doc/
+
+Method: PATCH
+Body: {
+   "id": 5,
+   "category": "Example Category11",
+   "name": "Dock namesaassadads",
+   "type": "Agreement22",
+   "members": "Vasye Pupov,Sergey Khrapko22",
+   "owner": "Vasye Pupov,Sergey Khrapko",
+   "comment": "Test Comrment333"
+}
+
+Response 200 OK
+
+
+
+
+
+Скачать файл
+
+Endpoint:api/v1/project/18/documents/1516/download_file/
+
+Method: GET
+
+Response {
+   "download_url": "https://obs.ru-moscow-1.hc.sbercloud.ru/ireg-lk3/1516_IMG_7591.png?AWSAccessKeyId=JZPHOITBZZ8GX6PNTCPL&Signature=kR5ieYxouyxznMjJElPX3eQJp7U%3D&Expires=1710137567"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+Интеграция с хранилищами
+
+
+
+Настройка  участников и правообладателя  для  всех файлов хранилища
+Endpoint: api/v1/project/1/settings_drive/
+Method: POST
+Body:                  "companies_ids": [1],
+ {members": {
+       "companies_ids": [1],
+       "users_ids": [7,27]
+   },
+   "owner": {
+ИЛИ
+       "users_ids": [7, 27]
+   }
+}
+
+Response HTTP_200_OK
+
+Обновить участников и правообладателя  для  всех файлов хранилища
+Endpoint: api/v1/project/1/settings_drive/
+Method:PATCH
+Body: {members": {
+       "companies_ids": [1],
+       "users_ids": [7,27]
+   },
+    "owner": {
+                  "companies_ids": [1],
+ИЛИ
+       "users_ids": [7, 27]
+   }
+
+}
+Важно, если у нас в объекте members ,были ключи companies_ids и users_ids , для того чтобы очистить данные нужно слать пустой список - 
+members": {
+       "companies_ids": [],
+       "users_ids": []
+   },
+У owner передаем пустую строку
+"owner": {
+                  "companies_ids": [],
+ИЛИ
+       "users_ids": []
+   }
+
+
+Response HTTP_200_OK
+
+
+Получить участников и правообладателя  для  всех файлов хранилища
+Endpoint: api/v1/project/1/settings_drive/
+Method: GET
+Response HTTP_200_OK
+
+
+
+Интеграция с Google Drive
+
+Создать новый аккаунт (Google Drive)
+
+При клике на кнопку подключить делаешь запрос:
+# https://accounts.google.com/o/oauth2/auth?client_id=73187356938-97fh6mmlglt8in00il0i5o8vj4jpiiri.apps.googleusercontent.com&redirect_uri=https://ireg-ui.herokuapp.com/
+&scope=https://www.googleapis.com/auth/drive+https://www.googleapis.com/auth/userinfo.email&response_type=code&access_type=offline
+Авторизуешься, в урле придет code его шлешь на ручку 
+
+
+Endpoint api/v1/project/3/sync_google/
+Body {
+"code": "4%2F0AWtgzh6mMyyQje7XrSwikrTsaAIwMic8ekt7h4UXnHnNEq-gEGrSglSjjF2jIVifZhojJg"
+
+}
+Method: POST
+Response HTTP_200_OK
+
+
+Изменить аккаунт (Google Drive)
+Флоу такой же как в предыдущем пункте, только меняется тело запроса 
+Endpoint api/v1/project/3/sync_google/
+Body {
+"is_change_account": True,
+"code": "4%2F0AWtgzh6mMyyQje7XrSwikrTsaAIwMic8ekt7h4UXnHnNEq-gEGrSglSjjF2jIVifZhojJg"
+
+}
+Method: GET
+Response HTTP_200_OK
+
+
+Интеграция с Yandex Drive
+
+При клике на кнопку подключить делаешь запрос:
+# https://oauth.yandex.ru/authorize?response_type=code&client_id=82a34c1ba3b7458bb724297ca77442e1
+Авторизуешься, в урле придет code его шлешь на ручку 
+
+
+Endpoint api/v1/project/3/sync_yandex/
+Body {
+"code": "4%2F0AWtgzh6mMyyQje7XrSwikrTsaAIwMic8ekt7h4UXnHnNEq-gEGrSglSjjF2jIVifZhojJg"
+
+}
+Method: GET
+Response HTTP_200_OK
+
+
+
+
+
+
+Отключить аккаунт
+Типы:
+-google
+-yandex
+
+Endpoint api/v1/project/1/disable_account/
+Body {
+  "type": "google"
+}
+
+Method: POST
+Response HTTP_200_OK
+
+
+Получить список файлов
+Типы:
+-google
+-yandex
+
+Endpoint api/v1/project/1/files_drive/?type=yandex
+
+
+Method: GET
+Response HTTP_200_OK
+
+Тут возможны три варианта
+
+1) Возвращает ошибку когда нет активного аккаунта - "Аккаунт не подключен"
+
+2) Когда мы первый раз подключили аккаунт, в фоне начинается синхронизация файлов, это контролируется определенным флагом, пока эта синхронизация не закончена сервер будет выдавать ошибку "Идет синхронизация файлов."
+Думаю стоит ее показывать пользователем
+
+3 Синхронизация закончилась, я возвращаю либо список файлов пагинацией ли бо путсо список
+
+
+Получить Профиль интеграции для проекта 
+Типы:
+-google
+-yandex
+
+Endpoint api/v1/project/1/profile_drive_integration/?type=yandex
+
+
+Method: GET
+Response HTTP_200_OK
+
+Скачать cloud-документ(сертификат) в проекте
+
+Endpoint:/api/v1/project/1/download_files_drive/27/
+
+Method: GET
+Response
+{
+   "file": "https://coach-staticfiles-staging.s3.amazonaws.com/main.py?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS76OCHXELXS2TYGE%2F20230112%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20230112T111454Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=0b0a9fd9cb1c7f1a5ed9f140e51467aeb7a85898d5702271b8f2f8bedb17a6b6",
+   "certificate": "https://coach-staticfiles-staging.s3.amazonaws.com/settings_local.py?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAS76OCHXELXS2TYGE%2F20230112%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20230112T111454Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=c8b1c750fa7bab12375343e607ac41c903039f79ad6ed12648f522ef1434513a"
+}
+
+
+Платежная система
+
+
+
+Получить пакеты
+Endpoint: api/v1/payments/package/
+Method: GET
+Response HTTP_200_OK
+
+Подписаться на пакет
+Endpoint: api/v1/payments/subscribe/<package_id>
+Method: POST
+Response HTTP_201_OK
+
+Отменить подписку
+Endpoint: api/v1/payments/unsubscribe/
+Method: POST
+Response HTTP_201_OK
+
+Получить детали подписки
+Важно, если в объекте подписки флаг is_pay_auto в значении True(это значит что деньги будут списываться ежемесячно) нужно на дизайне выводить информацию из поля pay_info, что бы пользователь понимал с какого счета или карточки будут списыаться деньги.
+
+Endpoint: api/v1/payments/м /
+Method: GET
+Response HTTP_200_OK
+
+
+Получить список чеков оплаты
+Endpoint: api/v1/payments/invoice/
+Method: GET
+Response HTTP_200_OK
+
+
+Получить список платных опций
+Endpoint: /api/v1/paid_options/
+Method: GET
+Response HTTP_200_OK
+
+Добавление платных опций при депонировании
+
+Флоу такой
+1) Нужно изменить текущую апишку, вместо GET запроса слать POST. Я пока оставил возможность слать GET чтобы не сломалось ничего, потом уберу.
+IREG API v2
+
+Если выбраны опции , слать тело запроса 
+{
+   "paid_option_ids":[1,2]
+}
+Т/е список идентификаторов платных опции. Если пользователь осуществил оплату в объекте депонирования или проще говоря в файле(IREG API v2), будет приходить новое поле:
+"paid_options": [
+       {
+           "id": 1,
+           "name": "Translator",
+           "description": "Первод с любого языка",
+           "price": "1000.00"
+       },
+       {
+           "id": 2,
+           "name": "Unique",
+           "description": "Уникальность",
+           "price": "500.00"
+       }
+   ]
+флоу отображения будет такой:
+Если есть какие-то оплаченные опции, дизлейблим их и пишем что они уже куплены делая метч по этому списку объектов(paid_options)
+
+
+Обновление платных опций 
+
+
+Endpoint: api/v1/project/18/documents/174/add_paid_options/
+Method: POST
+Body {
+   "paid_option_ids":[3]
+}
+
+Response HTTP_200_OK
+
+
+
+Сохранение файлов в S3 хранилище
+
+Добавить документ (Сертификат)
+
+Endpoint: api/v1/project/1/documents/create_s3
+Method: POST
+Body:  {
+   "name": "test",
+}
+
+
+Response: {
+"id": instance.id,
+ 'url': url - предподписанный url для загрузки файла в S3 
+}
+status: 200 Ok
+
+Пример загрузки файла в S3 с помощью предподписанного урла: 
+with open('../my_file1.txt', 'rb') as file:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

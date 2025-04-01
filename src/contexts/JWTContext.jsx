@@ -26,6 +26,8 @@ const verifyToken = (serviceToken) => {
     return false;
   }
   const decoded = jwtDecode(serviceToken);
+  console.log(decoded)
+  console.log("decoded")
   /**
    * Property 'exp' does not exist on type '<T = unknown>(token: string, options?: JwtDecodeOptions | undefined) => T'.
    */
@@ -33,9 +35,11 @@ const verifyToken = (serviceToken) => {
 };
 
 const setSession = (serviceToken) => {
+  console.log('serviceToken')
+  console.log(serviceToken)
   if (serviceToken) {
     localStorage.setItem('serviceToken', serviceToken);
-    axios.defaults.headers.common.Authorization = `Bearer ${serviceToken}`;
+    axios.defaults.headers.common.Authorization = `JWT ${serviceToken}`;
   } else {
     localStorage.removeItem('serviceToken');
     delete axios.defaults.headers.common.Authorization;
@@ -50,13 +54,21 @@ export const JWTProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
+    console.log('123')
     const init = async () => {
       try {
         const serviceToken = window.localStorage.getItem('serviceToken');
         if (serviceToken && verifyToken(serviceToken)) {
           setSession(serviceToken);
-          const response = await axios.get('/api/account/me');
-          const { user } = response.data;
+              // Шаг 2: Получение информации о пользователе
+          const userResponse = await axios.get('/api/v1/users/me/');
+          console.log(userResponse.data);
+
+          const user = userResponse.data;
+
+          //
+          // const response = await axios.get('/api/v1/users/me/');
+          // const { user } = response.data;
           dispatch({
             type: LOGIN,
             payload: {
@@ -80,45 +92,57 @@ export const JWTProvider = ({ children }) => {
     init();
   }, []);
 
-  const login = async (email, password) => {
-    const response = await axios.post('/api/account/login', { email, password });
-    const { serviceToken, user } = response.data;
+const login = async (email, password) => {
+  try {
+    console.log('Login');
+    // Шаг 1: Получение токена
+    const response = await axios.post('/api/v1/auth/jwt/create/', { email, password });
+    console.log(response.data);
+
+    const { access: serviceToken } = response.data;
+
+    // Установка токена в сессии (включает добавление токена в заголовки)
     setSession(serviceToken);
+
+    // Шаг 2: Получение информации о пользователе
+    const userResponse = await axios.get('/api/v1/users/me/');
+    console.log(userResponse.data);
+
+    const user = userResponse.data;
+
+    // Обновление состояния
     dispatch({
       type: LOGIN,
       payload: {
         isLoggedIn: true,
-        user
-      }
+        user,
+      },
     });
-  };
+  } catch (error) {
+    console.error('Login error:', error);
+    // Обработка ошибок
+    dispatch({
+      type: LOGIN_ERROR,
+      payload: {
+        isLoggedIn: false,
+        error: error.message,
+      },
+    });
+  }
+};
 
-  const register = async (email, password, firstName, lastName) => {
+
+  const register = async (email, password) => {
     // todo: this flow need to be recode as it not verified
-    const id = chance.bb_pin();
-    const response = await axios.post('/api/account/register', {
-      id,
+    const response = await axios.post('api/v1/users/', {
       email,
-      password,
-      firstName,
-      lastName
+      password
     });
-    let users = response.data;
-
-    if (window.localStorage.getItem('users') !== undefined && window.localStorage.getItem('users') !== null) {
-      const localUsers = window.localStorage.getItem('users');
-      users = [
-        ...JSON.parse(localUsers),
-        {
-          id,
-          email,
-          password,
-          name: `${firstName} ${lastName}`
-        }
-      ];
+    if (response.status === 201) {
+        sessionStorage.setItem('send_code_verification_email', email);
+        window.location.href = `/code-verification`;
     }
 
-    window.localStorage.setItem('users', JSON.stringify(users));
   };
 
   const logout = () => {

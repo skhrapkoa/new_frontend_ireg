@@ -11,6 +11,7 @@ import UserCard from './UserCard';
 // ==============================|| EMPTY STATE ||============================== //
 
 export default function EmptyUserCard({ title }) {
+    console.log('EmptyUserCard')
   return (
     <Grid container spacing={3}>
       <Grid item xs={12}>

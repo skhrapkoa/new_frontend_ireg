@@ -14,13 +14,12 @@ import { MenuFromAPI } from 'menu-items/dashboard';
 
 import useConfig from 'hooks/useConfig';
 import { HORIZONTAL_MAX_ITEM, MenuOrientation } from 'config';
-import { useGetMenu, useGetMenuMaster } from 'api/menu';
+import { useGetMenuMaster } from 'api/menu';
 
 // ==============================|| DRAWER CONTENT - NAVIGATION ||============================== //
 
 export default function Navigation() {
   const { menuOrientation } = useConfig();
-  const { menuLoading } = useGetMenu();
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
   const downLG = useMediaQuery((theme) => theme.breakpoints.down('lg'));
@@ -33,24 +32,19 @@ export default function Navigation() {
   let dashboardMenu = MenuFromAPI();
 
   useLayoutEffect(() => {
-    const isFound = menuItem.items.some((element) => {
-      if (element.id === 'group-dashboard') {
-        return true;
-      }
-      return false;
-    });
+    const isFound = menuItem.items.some((element) => element.id === 'group-dashboard');
 
-    if (menuLoading) {
-      menuItem.items.splice(0, 0, dashboardMenu);
-      setMenuItems({ items: [...menuItem.items] });
-    } else if (!menuLoading && dashboardMenu?.id !== undefined && !isFound) {
-      menuItem.items.splice(0, 1, dashboardMenu);
+    if (!isFound) {
+      if (menuItem.items.length > 0) {
+        menuItem.items[0] = dashboardMenu;
+      } else {
+        menuItem.items.push(dashboardMenu);
+      }
       setMenuItems({ items: [...menuItem.items] });
     } else {
       setMenuItems({ items: [...menuItem.items] });
     }
-    // eslint-disable-next-line
-  }, [menuLoading]);
+  }, []);
 
   const isHorizontal = menuOrientation === MenuOrientation.HORIZONTAL && !downLG;
 
@@ -58,9 +52,6 @@ export default function Navigation() {
   let lastItemIndex = menuItems.items.length - 1;
   let remItems = [];
   let lastItemId;
-
-  //  first it checks menu item is more than giving HORIZONTAL_MAX_ITEM after that get lastItemid by giving horizontal max
-  // item and it sets horizontal menu by giving horizontal max item lastly slice menuItem from array and set into remItems
 
   if (lastItem && lastItem < menuItems.items.length) {
     lastItemId = menuItems.items[lastItem - 1].id;

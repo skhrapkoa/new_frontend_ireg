@@ -46,7 +46,9 @@ import MoreOutlined from '@ant-design/icons/MoreOutlined';
 
 // ==============================|| CUSTOMER - CARD PREVIEW ||============================== //
 
-export default function CustomerPreview({ customer, open, onClose, editCustomer }) {
+export default function CustomerPreview({ document, open, onClose, editCustomer }) {
+  console.log('CUSTOMER - CARD PREVIEW')
+  console.log(document)
   const matchDownMD = useMediaQuery((theme) => theme.breakpoints.down('md'));
   const [openAlert, setOpenAlert] = useState(false);
 
@@ -104,13 +106,13 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                       spacing={0}
                       sx={{ display: { xs: 'none', sm: 'flex' } }}
                     >
-                      <PDFDownloadLink document={<ListCard customer={customer} />} fileName={`Customer-${customer.name}.pdf`}>
-                        <Tooltip title="Export">
-                          <IconButton color="secondary">
-                            <DownloadOutlined />
-                          </IconButton>
-                        </Tooltip>
-                      </PDFDownloadLink>
+                      {/*<PDFDownloadLink document={<ListCard customer={customer} />} fileName={`Customer-${customer.name}.pdf`}>*/}
+                      {/*  <Tooltip title="Export">*/}
+                      {/*    <IconButton color="secondary">*/}
+                      {/*      <DownloadOutlined />*/}
+                      {/*    </IconButton>*/}
+                      {/*  </Tooltip>*/}
+                      {/*</PDFDownloadLink>*/}
                       <Tooltip title="Edit">
                         <IconButton color="secondary" onClick={editCustomer}>
                           <EditOutlined />
@@ -127,14 +129,14 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
               >
                 <ListItemAvatar sx={{ mr: 0.75 }}>
                   <Avatar
-                    alt={customer.name}
+                    alt={document.name}
                     size="lg"
-                    src={getImageUrl(`avatar-${!customer.avatar ? 1 : customer.avatar}.png`, ImagePath.USERS)}
+                    src={getImageUrl(`avatar-${!document.avatar ? 1 : document.avatar}.png`, ImagePath.USERS)}
                   />
                 </ListItemAvatar>
                 <ListItemText
-                  primary={<Typography variant="h5">{customer.name}</Typography>}
-                  secondary={<Typography color="secondary">{customer.role}</Typography>}
+                  primary={<Typography variant="h5">{document.name}</Typography>}
+                  secondary={<Typography color="secondary">{document.role}</Typography>}
                 />
               </ListItem>
             </List>
@@ -158,7 +160,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
             }}
           >
             <MenuItem sx={{ a: { textDecoration: 'none', color: 'inherit' } }}>
-              <PDFDownloadLink document={<ListSmallCard customer={customer} />} fileName={`Customer-${customer.name}.pdf`}>
+              <PDFDownloadLink document={<ListSmallCard document={document} />} fileName={`Customer-${document.name}.pdf`}>
                 Export PDF
               </PDFDownloadLink>
             </MenuItem>
@@ -173,7 +175,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                     <Grid item xs={12}>
                       <MainCard title="About me">
                         <Typography>
-                          Hello, Myself {customer.name}, I’m {customer.role} in international company, {customer.about}
+                          Hello, Myself {document.name}, I’m {document.role} in international company, {document.about}
                         </Typography>
                       </MainCard>
                     </Grid>
@@ -274,22 +276,22 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                     </Grid>
                     <Grid item xs={12}>
                       <MainCard title="Skills">
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            listStyle: 'none',
-                            p: 0.5,
-                            m: 0
-                          }}
-                          component="ul"
-                        >
-                          {customer.skills.map((skill, index) => (
-                            <ListItem disablePadding key={index} sx={{ width: 'auto', pr: 0.75, pb: 0.75 }}>
-                              <Chip color="secondary" variant="outlined" size="small" label={skill} />
-                            </ListItem>
-                          ))}
-                        </Box>
+                        {/*<Box*/}
+                        {/*  sx={{*/}
+                        {/*    display: 'flex',*/}
+                        {/*    flexWrap: 'wrap',*/}
+                        {/*    listStyle: 'none',*/}
+                        {/*    p: 0.5,*/}
+                        {/*    m: 0*/}
+                        {/*  }}*/}
+                        {/*  component="ul"*/}
+                        {/*>*/}
+                        {/*  {customer.skills.map((skill, index) => (*/}
+                        {/*    <ListItem disablePadding key={index} sx={{ width: 'auto', pr: 0.75, pb: 0.75 }}>*/}
+                        {/*      <Chip color="secondary" variant="outlined" size="small" label={skill} />*/}
+                        {/*    </ListItem>*/}
+                        {/*  ))}*/}
+                        {/*</Box>*/}
                       </MainCard>
                     </Grid>
                   </Grid>
@@ -300,27 +302,27 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                       <Stack spacing={0.5}>
                         <Typography color="secondary">Father Name</Typography>
                         <Typography>
-                          Mr. {customer.firstName} {customer.lastName}
+                          Mr. {document.firstName} {document.lastName}
                         </Typography>
                       </Stack>
                       <Stack spacing={0.5}>
                         <Typography color="secondary">Email</Typography>
-                        <Typography>{customer.email}</Typography>
+                        <Typography>{document.email}</Typography>
                       </Stack>
                       <Stack spacing={0.5}>
                         <Typography color="secondary">Contact</Typography>
                         <Typography>
-                          <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={customer.contact} />
+                          <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={document.contact} />
                         </Typography>
                       </Stack>
                       <Stack spacing={0.5}>
                         <Typography color="secondary">Location</Typography>
-                        <Typography> {customer.country} </Typography>
+                        <Typography> {document.country} </Typography>
                       </Stack>
                       <Stack spacing={0.5}>
                         <Typography color="secondary">Website</Typography>
                         <Link href="https://google.com" target="_blank" sx={{ textTransform: 'lowercase' }}>
-                          https://{customer.firstName}.en
+                          https://{document.firstName}.en
                         </Link>
                       </Stack>
                     </Stack>
@@ -337,9 +339,9 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
           </DialogActions>
         </Box>
       </Dialog>
-      <AlertCustomerDelete id={customer.id} title={customer.name} open={openAlert} handleClose={handleClose} />
+      <AlertCustomerDelete id={document.id} title={document.name} open={openAlert} handleClose={handleClose} />
     </>
   );
 }
 
-CustomerPreview.propTypes = { customer: PropTypes.any, open: PropTypes.bool, onClose: PropTypes.func, editCustomer: PropTypes.func };
+CustomerPreview.propTypes = { document: PropTypes.any, open: PropTypes.bool, onClose: PropTypes.func, editCustomer: PropTypes.func };

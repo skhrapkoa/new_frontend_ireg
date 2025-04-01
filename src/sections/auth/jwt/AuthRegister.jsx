@@ -4,6 +4,7 @@ import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-d
 // material-ui
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
 import Grid from '@mui/material/Grid';
@@ -31,8 +32,6 @@ import { strengthColor, strengthIndicator } from 'utils/password-strength';
 import EyeOutlined from '@ant-design/icons/EyeOutlined';
 import EyeInvisibleOutlined from '@ant-design/icons/EyeInvisibleOutlined';
 
-// ============================|| JWT - REGISTER ||============================ //
-
 export default function AuthRegister() {
   const { register } = useAuth();
   const scriptedRef = useScriptRef();
@@ -40,6 +39,7 @@ export default function AuthRegister() {
 
   const [level, setLevel] = useState();
   const [showPassword, setShowPassword] = useState(false);
+
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
   };
@@ -50,11 +50,22 @@ export default function AuthRegister() {
 
   const changePassword = (value) => {
     const temp = strengthIndicator(value);
-    setLevel(strengthColor(temp));
+    const strength = strengthColor(temp);
+    console.log(strength.label)
+    // Переопределение метки на русском языке
+    const translatedLabel = {
+      'Poor': 'Очень слабый',
+      'Weak': 'Слабый',
+      'Normal': 'Средний',
+      'Good': 'Хороший',
+      'Strong': 'Очень надежный'
+    }[strength.label] || 'Неопределенный';
+
+    setLevel({ ...strength, label: translatedLabel });
   };
 
   const [searchParams] = useSearchParams();
-  const auth = searchParams.get('auth'); // get auth and set route based on that
+  const auth = searchParams.get('auth');
 
   useEffect(() => {
     changePassword('');
@@ -64,21 +75,16 @@ export default function AuthRegister() {
     <>
       <Formik
         initialValues={{
-          firstname: '',
-          lastname: '',
           email: '',
-          company: '',
           password: '',
           submit: null
         }}
         validationSchema={Yup.object().shape({
-          firstname: Yup.string().max(255).required('First Name is required'),
-          lastname: Yup.string().max(255).required('Last Name is required'),
-          email: Yup.string().email('Must be a valid email').max(255).required('Email is required'),
+          email: Yup.string().email('Введите действительный email').max(255).required('Email обязателен'),
           password: Yup.string()
-            .required('Password is required')
-            .test('no-leading-trailing-whitespace', 'Password cannot start or end with spaces', (value) => value === value.trim())
-            .max(10, 'Password must be less than 10 characters')
+            .required('Пароль обязателен')
+            .test('no-leading-trailing-whitespace', 'Пароль не может начинаться или заканчиваться пробелами', (value) => value === value.trim())
+            .max(20, 'Пароль должен содержать не более 20 символов')
         })}
         onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
           try {
@@ -89,22 +95,27 @@ export default function AuthRegister() {
               setSubmitting(false);
               openSnackbar({
                 open: true,
-                message: 'Your registration has been successfully completed.',
+                message: 'Регистрация успешно завершена.',
                 variant: 'alert',
-
-                alert: {
-                  color: 'success'
-                }
+                alert: { color: 'success' }
               });
-
               setTimeout(() => {
                 navigate(auth ? `/${auth}/login?auth=jwt` : '/login', { replace: true });
               }, 1500);
             }
           } catch (err) {
-            console.error(err);
+            const fieldErrors = {};
+            if (err.email) {
+              fieldErrors.email = err.email.join('\n');
+            }
+            if (err.password) {
+              fieldErrors.password = err.password.join('\n');
+            }
+            if (!fieldErrors.email && !fieldErrors.password) {
+              fieldErrors.submit = 'Произошла ошибка регистрации';
+            }
+            setErrors(fieldErrors);
             setStatus({ success: false });
-            setErrors({ submit: err.message });
             setSubmitting(false);
           }
         }}
@@ -112,73 +123,10 @@ export default function AuthRegister() {
         {({ errors, handleBlur, handleChange, handleSubmit, isSubmitting, touched, values }) => (
           <form noValidate onSubmit={handleSubmit}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                <Stack spacing={1}>
-                  <InputLabel htmlFor="firstname-signup">First Name*</InputLabel>
-                  <OutlinedInput
-                    id="firstname-login"
-                    type="firstname"
-                    value={values.firstname}
-                    name="firstname"
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                    placeholder="John"
-                    fullWidth
-                    error={Boolean(touched.firstname && errors.firstname)}
-                  />
-                </Stack>
-                {touched.firstname && errors.firstname && (
-                  <FormHelperText error id="helper-text-firstname-signup">
-                    {errors.firstname}
-                  </FormHelperText>
-                )}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Stack spacing={1}>
-                  <InputLabel htmlFor="lastname-signup">Last Name*</InputLabel>
-                  <OutlinedInput
-                    fullWidth
-                    error={Boolean(touched.lastname && errors.lastname)}
-                    id="lastname-signup"
-                    type="lastname"
-                    value={values.lastname}
-                    name="lastname"
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                    placeholder="Doe"
-                    inputProps={{}}
-                  />
-                </Stack>
-                {touched.lastname && errors.lastname && (
-                  <FormHelperText error id="helper-text-lastname-signup">
-                    {errors.lastname}
-                  </FormHelperText>
-                )}
-              </Grid>
+              {/* Поля для email и пароля */}
               <Grid item xs={12}>
                 <Stack spacing={1}>
-                  <InputLabel htmlFor="company-signup">Company</InputLabel>
-                  <OutlinedInput
-                    fullWidth
-                    error={Boolean(touched.company && errors.company)}
-                    id="company-signup"
-                    value={values.company}
-                    name="company"
-                    onBlur={handleBlur}
-                    onChange={handleChange}
-                    placeholder="Demo Inc."
-                    inputProps={{}}
-                  />
-                </Stack>
-                {touched.company && errors.company && (
-                  <FormHelperText error id="helper-text-company-signup">
-                    {errors.company}
-                  </FormHelperText>
-                )}
-              </Grid>
-              <Grid item xs={12}>
-                <Stack spacing={1}>
-                  <InputLabel htmlFor="email-signup">Email Address*</InputLabel>
+                  <InputLabel htmlFor="email-signup">Адрес электронной почты*</InputLabel>
                   <OutlinedInput
                     fullWidth
                     error={Boolean(touched.email && errors.email)}
@@ -189,7 +137,6 @@ export default function AuthRegister() {
                     onBlur={handleBlur}
                     onChange={handleChange}
                     placeholder="demo@company.com"
-                    inputProps={{}}
                   />
                 </Stack>
                 {touched.email && errors.email && (
@@ -200,7 +147,7 @@ export default function AuthRegister() {
               </Grid>
               <Grid item xs={12}>
                 <Stack spacing={1}>
-                  <InputLabel htmlFor="password-signup">Password</InputLabel>
+                  <InputLabel htmlFor="password-signup">Пароль</InputLabel>
                   <OutlinedInput
                     fullWidth
                     error={Boolean(touched.password && errors.password)}
@@ -216,7 +163,7 @@ export default function AuthRegister() {
                     endAdornment={
                       <InputAdornment position="end">
                         <IconButton
-                          aria-label="toggle password visibility"
+                          aria-label="показать или скрыть пароль"
                           onClick={handleClickShowPassword}
                           onMouseDown={handleMouseDownPassword}
                           edge="end"
@@ -227,7 +174,6 @@ export default function AuthRegister() {
                       </InputAdornment>
                     }
                     placeholder="******"
-                    inputProps={{}}
                   />
                 </Stack>
                 {touched.password && errors.password && (
@@ -248,27 +194,21 @@ export default function AuthRegister() {
                   </Grid>
                 </FormControl>
               </Grid>
-              <Grid item xs={12}>
-                <Typography variant="body2">
-                  By Signing up, you agree to our &nbsp;
-                  <Link variant="subtitle2" component={RouterLink} to="#">
-                    Terms of Service
-                  </Link>
-                  &nbsp; and &nbsp;
-                  <Link variant="subtitle2" component={RouterLink} to="#">
-                    Privacy Policy
-                  </Link>
-                </Typography>
-              </Grid>
-              {errors.submit && (
-                <Grid item xs={12}>
-                  <FormHelperText error>{errors.submit}</FormHelperText>
-                </Grid>
-              )}
+
+              {/* Кнопка создания аккаунта с анимацией ожидания */}
               <Grid item xs={12}>
                 <AnimateButton>
-                  <Button disableElevation disabled={isSubmitting} fullWidth size="large" type="submit" variant="contained" color="primary">
-                    Create Account
+                  <Button
+                    disableElevation
+                    disabled={isSubmitting}
+                    fullWidth
+                    size="large"
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
+                  >
+                    {isSubmitting ? 'Подождите...' : 'Создать аккаунт'}
                   </Button>
                 </AnimateButton>
               </Grid>

@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 // material-ui
 import Button from '@mui/material/Button';
@@ -7,26 +7,30 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 
 // project import
-import useAuth from 'hooks/useAuth';
 import AnimateButton from 'components/@extended/AnimateButton';
 import AuthWrapper from 'sections/auth/AuthWrapper';
 
-// ================================|| JWT - CHECK MAIL ||================================ //
+import { useEffect, useState } from 'react';
 
-export default function CheckMail() {
-  const { isLoggedIn } = useAuth();
+// Страница отображается после успешной регистрации //
 
-  const [searchParams] = useSearchParams();
-  const auth = searchParams.get('auth'); // get auth and set route based on that
-
+export default function ApproveMail() {
+  const [email, setEmail] = useState('');
+    useEffect(() => {
+    const savedEmail = sessionStorage.getItem('approve_email');
+    setEmail(savedEmail);
+    // Очистить email из sessionStorage, если он больше не нужен
+    sessionStorage.removeItem('approve_email');
+  }, []);
+  console.log(email)
   return (
     <AuthWrapper>
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Box sx={{ mb: { xs: -0.5, sm: 0.5 } }}>
-            <Typography variant="h3">Hi, Check Your Mail</Typography>
+            <Typography variant="h3">Проверьте свою почту</Typography>
             <Typography color="secondary" sx={{ mb: 0.5, mt: 1.25 }}>
-              We have sent a password recover instructions to your email.
+              Мы отправили письмо на почту <strong>{email}</strong>, в котором присутствует ссылка на активацию вашего аккаунта
             </Typography>
           </Box>
         </Grid>
@@ -34,7 +38,7 @@ export default function CheckMail() {
           <AnimateButton>
             <Button
               component={Link}
-              to={isLoggedIn ? '/auth/login' : auth ? `/${auth}/login?auth=jwt` : '/login'}
+              to="/login"
               disableElevation
               fullWidth
               size="large"
@@ -42,7 +46,7 @@ export default function CheckMail() {
               variant="contained"
               color="primary"
             >
-              Sign in
+              Войти
             </Button>
           </AnimateButton>
         </Grid>

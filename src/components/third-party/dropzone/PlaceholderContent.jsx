@@ -26,21 +26,25 @@ export default function PlaceholderContent({ type }) {
         >
           <CardMedia component="img" image={UploadCover} sx={{ width: 150 }} />
           <Stack sx={{ p: 3 }} spacing={1}>
-            <Typography variant="h5">Drag & Drop or Select file</Typography>
+          <Typography variant="h5">Перетащите файл или выберите из проводника</Typography>
+
 
             <Typography color="secondary">
-              Drop files here or click&nbsp;
+            Перетащите файл сюда или нажмите&nbsp;
               <Typography component="span" color="primary" sx={{ textDecoration: 'underline' }}>
-                browse
+              выбрать
               </Typography>
-              &nbsp;thorough your machine
+              &nbsp;чтобы найти на вашем компьютере
             </Typography>
           </Stack>
         </Stack>
       )}
       {type === DropzopType.STANDARD && (
         <Stack alignItems="center" justifyContent="center" sx={{ height: 1 }}>
-          <CameraOutlined style={{ fontSize: '32px' }} />
+                    <CloudUploadOutlined style={{ fontSize: '64px', color: '#3f51b5' }} />
+          <Typography variant="body1" color="primary" sx={{ mt: 1 }}>
+            Нажмите для загрузки файла
+          </Typography>
         </Stack>
       )}
     </>

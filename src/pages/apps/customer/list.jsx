@@ -32,6 +32,7 @@ import PlusOutlined from '@ant-design/icons/PlusOutlined';
 
 export default function CustomerListPage() {
   const { customersLoading, customers: lists } = useGetCustomer();
+  console.log('CUSTOMER LIST')
 
   const [open, setOpen] = useState(false);
 

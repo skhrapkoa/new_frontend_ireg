@@ -214,18 +214,18 @@ export default function ListCard({ customer }) {
                   </View>
                 </View>
               </View>
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>Skill</Text>
-                <View style={styles.cardContent}>
-                  <View style={[styles.row, { gap: 1, flexWrap: 'wrap' }]}>
-                    {customer.skills.map((skill, index) => (
-                      <View style={styles.chip} key={index}>
-                        <Text style={styles.chipTitle}>{skill}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </View>
+              {/*<View style={styles.card}>*/}
+              {/*  <Text style={styles.cardTitle}>Skill</Text>*/}
+              {/*  <View style={styles.cardContent}>*/}
+              {/*    <View style={[styles.row, { gap: 1, flexWrap: 'wrap' }]}>*/}
+              {/*      {customer.skills.map((skill, index) => (*/}
+              {/*        <View style={styles.chip} key={index}>*/}
+              {/*          <Text style={styles.chipTitle}>{skill}</Text>*/}
+              {/*        </View>*/}
+              {/*      ))}*/}
+              {/*    </View>*/}
+              {/*  </View>*/}
+              {/*</View>*/}
             </View>
             <View style={styles.rightColumn}>
               <View style={[styles.card, styles.infoCard]}>

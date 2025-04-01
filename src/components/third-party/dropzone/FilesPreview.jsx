@@ -12,15 +12,17 @@ import { DropzopType } from 'config';
 // utils
 import getDropzoneData from 'utils/getDropzoneData';
 
-// type
-
 // assets
 import CloseCircleFilled from '@ant-design/icons/CloseCircleFilled';
 import FileFilled from '@ant-design/icons/FileFilled';
 
+// библиотека filesize
+import { filesize } from 'filesize';
+
+
 // ==============================|| MULTI UPLOAD - PREVIEW ||============================== //
 
-export default function FilesPreview({ showList = false, files, onRemove, type }) {
+export default function FilesPreview({ showList = false, files, onRemove, type, hideRemoveButton = false }) {
   const hasFile = files.length > 0;
   const layoutType = type;
 
@@ -56,7 +58,7 @@ export default function FilesPreview({ showList = false, files, onRemove, type }
               {type?.includes('image') && <CardMedia component="img" alt="preview" src={preview} style={{ width: '100%' }} />}
               {!type?.includes('image') && <FileFilled style={{ width: '100%', fontSize: '1.5rem' }} />}
 
-              {onRemove && (
+              {onRemove && !hideRemoveButton && (
                 <IconButton
                   size="small"
                   color="error"
@@ -85,12 +87,12 @@ export default function FilesPreview({ showList = false, files, onRemove, type }
             <FileFilled style={{ width: '30px', height: '30px', fontSize: '1.15rem', marginRight: 4 }} />
             <ListItemText
               primary={typeof file === 'string' ? file : name}
-              secondary={typeof file === 'string' ? '' : size}
+              secondary={typeof file === 'string' ? '' : filesize(size)}
               primaryTypographyProps={{ variant: 'subtitle2' }}
               secondaryTypographyProps={{ variant: 'caption' }}
             />
 
-            {onRemove && (
+            {onRemove && !hideRemoveButton && (
               <IconButton edge="end" size="small" onClick={() => onRemove(file)}>
                 <CloseCircleFilled style={{ fontSize: '1.15rem' }} />
               </IconButton>
@@ -102,4 +104,10 @@ export default function FilesPreview({ showList = false, files, onRemove, type }
   );
 }
 
-FilesPreview.propTypes = { showList: PropTypes.bool, files: PropTypes.any, onRemove: PropTypes.any, type: PropTypes.any };
+FilesPreview.propTypes = { 
+  showList: PropTypes.bool, 
+  files: PropTypes.any, 
+  onRemove: PropTypes.any, 
+  type: PropTypes.any,
+  hideRemoveButton: PropTypes.bool
+};

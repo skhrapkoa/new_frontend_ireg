@@ -1,18 +1,27 @@
+import { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 // material-ui
 import { styled } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import CheckCircleOutlined from '@ant-design/icons/CheckCircleOutlined';
+import CloseCircleOutlined from '@ant-design/icons/CloseCircleOutlined';
 
 // third-party
 import { useDropzone } from 'react-dropzone';
 
 // project import
+import AnimatedLinearWithLabel from 'components/@extended/progress/AnimatedLinearWithLabel';
 import RejectionFiles from './RejectionFiles';
 import PlaceholderContent from './PlaceholderContent';
 import FilesPreview from './FilesPreview';
-import { DropzopType } from 'config';
 
 const DropzoneWrapper = styled('div')(({ theme }) => ({
   outline: 'none',
@@ -23,30 +32,262 @@ const DropzoneWrapper = styled('div')(({ theme }) => ({
   '&:hover': { opacity: 0.72, cursor: 'pointer' }
 }));
 
-// ==============================|| UPLOAD - MULTIPLE FILE ||============================== //
+// Сообщение об успешной загрузке
+const SuccessMessage = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: theme.spacing(1.5),
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: theme.palette.success.lighter,
+  color: theme.palette.success.dark,
+  marginTop: theme.spacing(1),
+  marginBottom: theme.spacing(1)
+}));
 
-export default function MultiFileUpload({ error, showList = false, files, type, setFieldValue, sx, onUpload }) {
+// Сообщение об ошибке загрузки
+const ErrorMessage = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  padding: theme.spacing(1.5),
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: theme.palette.error.lighter,
+  color: theme.palette.error.dark,
+  marginTop: theme.spacing(1),
+  marginBottom: theme.spacing(1)
+}));
+
+export default function MultiFileUpload({
+  error,
+  files,
+  setFieldValue,
+  sx,
+  onGetAction,
+  onUploading,
+  onCreated,
+  onSuccess,
+  onChange
+}) {
+  const [progress, setProgress] = useState(0); // Состояние для прогресса загрузки
+  const [isUploading, setIsUploading] = useState(false); // Флаг загрузки
+  const [showProgressBar, setShowProgressBar] = useState(false); // Флаг отображения прогресс-бара
+  const [uploadSuccess, setUploadSuccess] = useState(false); // Флаг успешной загрузки (для уведомления)
+  const [uploadError, setUploadError] = useState(false); // Флаг ошибки загрузки
+  const [errorMessage, setErrorMessage] = useState(''); // Сообщение об ошибке
+  const [fileUploaded, setFileUploaded] = useState(false); // Флаг успешной загрузки (постоянный)
+  const [confirmOpen, setConfirmOpen] = useState(false); // Состояние для модального окна подтверждения удаления
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false); // Состояние для модального окна подтверждения отмены загрузки
+  const lastProgressRef = useRef(0); // Для сохранения последнего значения прогресса
+  const xhrRef = useRef(null); // Ссылка на XMLHttpRequest для возможности отмены
+  const messageTimerRef = useRef(null); // Для таймера скрытия сообщения
+
+  // Скрытие сообщений об успехе или ошибке через 3 секунды
+  useEffect(() => {
+    if (uploadSuccess || uploadError) {
+      // Очищаем предыдущий таймер, если он был
+      if (messageTimerRef.current) {
+        clearTimeout(messageTimerRef.current);
+      }
+      
+      // Устанавливаем новый таймер для автоматического скрытия
+      messageTimerRef.current = setTimeout(() => {
+        setUploadSuccess(false);
+        setUploadError(false);
+        setErrorMessage('');
+        messageTimerRef.current = null;
+      }, 3000);
+    }
+    
+    // Очищаем таймер при размонтировании компонента
+    return () => {
+      if (messageTimerRef.current) {
+        clearTimeout(messageTimerRef.current);
+      }
+    };
+  }, [uploadSuccess, uploadError]);
+
   const { getRootProps, getInputProps, isDragActive, isDragReject, fileRejections } = useDropzone({
-    multiple: true,
+    multiple: false, // Одиночная загрузка
     onDrop: (acceptedFiles) => {
-      if (files) {
-        setFieldValue('files', [...files, ...acceptedFiles.map((file) => Object.assign(file, { preview: URL.createObjectURL(file) }))]);
-      } else {
-        setFieldValue(
-          'files',
-          acceptedFiles.map((file) => Object.assign(file, { preview: URL.createObjectURL(file) }))
-        );
+      const file = acceptedFiles[0];
+      if (file) {
+        // Сбрасываем состояния при выборе нового файла
+        setUploadSuccess(false);
+        setUploadError(false);
+        setShowProgressBar(false);
+        setProgress(0);
+        setFileUploaded(false); // Сбрасываем флаг успешной загрузки
+        
+        setFieldValue('files', [file]); // Устанавливаем файл
+        onChange?.([file]); // Обновляем состояние родителя
       }
     }
   });
 
-  const onRemoveAll = () => {
-    setFieldValue('files', null);
+  const uploadFile = async () => {
+    if (!files || files.length === 0) {
+      console.error('No file to upload');
+      return;
+    }
+
+    // Сбрасываем предыдущие состояния
+    setUploadSuccess(false);
+    setUploadError(false);
+    setErrorMessage('');
+
+    const file = files[0];
+    onUploading?.(); // Начало загрузки
+    setIsUploading(true); // Устанавливаем флаг загрузки
+    setProgress(0); // Сбрасываем прогресс
+    lastProgressRef.current = 0; // Сбрасываем последний прогресс
+    setShowProgressBar(true); // Показываем прогресс-бар
+
+    try {
+      const data = await onGetAction(file); // Получаем presigned URL
+      onCreated?.(String(data.id), String(data.price)); // Передаем ID и цену
+
+      const xhr = new XMLHttpRequest();
+      xhrRef.current = xhr; // Сохраняем ссылку для возможности отмены
+
+      xhr.open('PUT', data.url, true);
+      xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+      // Обработчик прогресса с защитой от "скачков" назад
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          
+          // Предотвращаем обновление, если новое значение меньше предыдущего,
+          // или возрастание слишком быстрое (более чем на 5% за один раз)
+          if (percentComplete >= lastProgressRef.current && 
+              (percentComplete - lastProgressRef.current <= 5 || percentComplete >= 100)) {
+            lastProgressRef.current = percentComplete;
+            setProgress(percentComplete);
+          }
+        }
+      };
+
+      // Обработчик завершения загрузки
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          lastProgressRef.current = 100;
+          setProgress(100); // Устанавливаем 100% после завершения
+          
+          // Показываем сообщение об успехе через 500ms
+          setTimeout(() => {
+            setShowProgressBar(false);
+            setUploadSuccess(true); // Показать сообщение об успехе 
+            setFileUploaded(true); // Установить флаг успешной загрузки навсегда
+            onSuccess?.(); // Успешная загрузка
+            console.log('File uploaded successfully');
+          }, 500);
+        } else {
+          console.error('Failed to upload file');
+          setUploadError(true);
+          setErrorMessage('Ошибка загрузки файла. Пожалуйста, попробуйте снова.');
+          handleUploadError(xhr.status, 'Failed to upload file');
+        }
+        setIsUploading(false);
+        xhrRef.current = null; // Очищаем ссылку
+      };
+
+      xhr.onerror = () => {
+        console.error('Error during file upload');
+        setUploadError(true);
+        setErrorMessage('Произошла ошибка при загрузке файла.');
+        handleUploadError(xhr.status, 'Error during file upload');
+        setIsUploading(false);
+        xhrRef.current = null; // Очищаем ссылку
+      };
+
+      xhr.send(file); // Загружаем файл
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setIsUploading(false);
+      setUploadError(true);
+      setErrorMessage('Не удалось начать загрузку файла.');
+      
+      // Если ошибка связана с авторизацией - перенаправляем на логин
+      if (error.message && error.message.includes('Authentication token')) {
+        redirectToLogin();
+      }
+    }
   };
 
-  const onRemove = (file) => {
-    const filteredItems = files && files.filter((_file) => _file !== file);
-    setFieldValue('files', filteredItems);
+  // Отмена текущей загрузки
+  const cancelUpload = () => {
+    if (xhrRef.current) {
+      xhrRef.current.abort(); // Прерываем загрузку
+      xhrRef.current = null;
+      setIsUploading(false);
+      setShowProgressBar(false);
+      setProgress(0);
+      setUploadError(true);
+      setErrorMessage('Загрузка была отменена.');
+    }
+  };
+
+  // Функция обработки ошибок загрузки
+  const handleUploadError = (status, message) => {
+    // Если ошибка 401 - перенаправляем на страницу логина
+    if (status === 401) {
+      redirectToLogin();
+    }
+  };
+
+  // Функция перенаправления на страницу логина
+  const redirectToLogin = () => {
+    // Сохраняем текущий URL для возврата после авторизации
+    sessionStorage.setItem('returnUrl', window.location.pathname);
+    // Перенаправляем на страницу логина
+    window.location.pathname = '/login';
+  };
+
+  // Обработчик запроса на удаление - показывает диалог подтверждения
+  const handleRemoveRequest = () => {
+    setConfirmOpen(true);
+  };
+
+  // Подтверждение удаления
+  const confirmRemove = () => {
+    setConfirmOpen(false);
+    onRemove();
+  };
+
+  // Отмена удаления
+  const cancelRemove = () => {
+    setConfirmOpen(false);
+  };
+
+  // Обработчик запроса на отмену загрузки - показывает диалог подтверждения
+  const handleCancelRequest = () => {
+    setCancelConfirmOpen(true);
+  };
+
+  // Подтверждение отмены загрузки
+  const confirmCancel = () => {
+    setCancelConfirmOpen(false);
+    cancelUpload(); // Вызываем функцию отмены загрузки
+  };
+
+  // Отмена отмены загрузки (продолжить загрузку)
+  const cancelCancelRequest = () => {
+    setCancelConfirmOpen(false);
+  };
+
+  const onRemove = () => {
+    setFieldValue('files', null); // Удаляем файл
+    onChange?.([]); // Обновляем состояние родителя
+    setProgress(0); // Сбрасываем прогресс
+    lastProgressRef.current = 0; // Сбрасываем последний прогресс
+    setShowProgressBar(false); // Скрываем прогресс-бар
+    setUploadSuccess(false); // Сбрасываем флаг успеха
+    setUploadError(false); // Сбрасываем флаг ошибки
+    setFileUploaded(false); // Сбрасываем флаг успешной загрузки
+    
+    // Отменяем текущую загрузку, если она идет
+    if (isUploading && xhrRef.current) {
+      cancelUpload();
+    }
   };
 
   return (
@@ -54,56 +295,150 @@ export default function MultiFileUpload({ error, showList = false, files, type, 
       <Box
         sx={{
           width: '100%',
-          ...(type === DropzopType.STANDARD && { width: 'auto', display: 'flex' }),
           ...sx
         }}
       >
-        <Stack {...(type === DropzopType.STANDARD && { alignItems: 'center' })}>
-          <DropzoneWrapper
-            {...getRootProps()}
-            sx={{
-              ...(type === DropzopType.STANDARD && { p: 0, m: 1, width: 64, height: 64 }),
-              ...(isDragActive && { opacity: 0.72 }),
-              ...((isDragReject || error) && {
-                color: 'error.main',
-                borderColor: 'error.light',
-                bgcolor: 'error.lighter'
-              })
-            }}
-          >
-            <input {...getInputProps()} />
-            <PlaceholderContent type={type} />
-          </DropzoneWrapper>
-          {type === DropzopType.STANDARD && files && files.length > 1 && (
-            <Button variant="contained" color="error" size="extraSmall" onClick={onRemoveAll}>
-              Remove all
-            </Button>
-          )}
-        </Stack>
+        {!files || files.length === 0 ? (
+          <Stack alignItems="center">
+            <DropzoneWrapper
+              {...getRootProps()}
+              sx={{
+                ...(isDragActive && { opacity: 0.72 }),
+                ...((isDragReject || error) && {
+                  color: 'error.main',
+                  borderColor: 'error.light',
+                  bgcolor: 'error.lighter'
+                })
+              }}
+            >
+              <input {...getInputProps()} />
+              <PlaceholderContent />
+            </DropzoneWrapper>
+          </Stack>
+        ) : (
+          <FilesPreview files={files} onRemove={handleRemoveRequest} hideRemoveButton={isUploading} />
+        )}
+
         {fileRejections.length > 0 && <RejectionFiles fileRejections={fileRejections} />}
-        {files && files.length > 0 && <FilesPreview files={files} showList={showList} onRemove={onRemove} type={type} />}
       </Box>
 
-      {type !== DropzopType.STANDARD && files && files.length > 0 && (
-        <Stack direction="row" justifyContent="flex-end" spacing={1.5} sx={{ mt: 1.5 }}>
-          <Button color="inherit" size="small" onClick={onRemoveAll}>
-            Remove all
+      {/* Диалог подтверждения удаления файла */}
+      <Dialog
+        open={confirmOpen}
+        onClose={cancelRemove}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">
+          Подтверждение удаления
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Вы уверены, что хотите удалить этот объект?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelRemove} color="primary">
+            Нет
           </Button>
-          <Button size="small" variant="contained" onClick={onUpload}>
-            Upload files
+          <Button onClick={confirmRemove} color="error" autoFocus>
+            Да
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Диалог подтверждения отмены загрузки */}
+      <Dialog
+        open={cancelConfirmOpen}
+        onClose={cancelCancelRequest}
+        aria-labelledby="cancel-dialog-title"
+        aria-describedby="cancel-dialog-description"
+      >
+        <DialogTitle id="cancel-dialog-title">
+          Подтверждение отмены загрузки
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="cancel-dialog-description">
+            Вы действительно хотите отменить загрузку объекта?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelCancelRequest} color="primary">
+            Нет
+          </Button>
+          <Button onClick={confirmCancel} color="error" autoFocus>
+            Да
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {files && files.length > 0 && (
+        <Stack spacing={2} sx={{ mt: 2 }}>
+          <Stack direction="row" justifyContent="flex-end" spacing={1.5}>
+            {/* Показываем кнопку "Удалить" только если файл не загружен успешно */}
+            {!fileUploaded && (
+              <Button 
+                color="error" 
+                size="small" 
+                onClick={isUploading ? handleCancelRequest : handleRemoveRequest} 
+                disabled={isUploading && !xhrRef.current}
+                variant="outlined"
+                startIcon={isUploading ? <CloseCircleOutlined /> : null}
+                sx={{
+                  '&:hover': {
+                    bgcolor: 'error.lighter',
+                    color: 'error.dark'
+                  },
+                  transition: 'all 0.2s',
+                  minWidth: '130px'
+                }}
+              >
+                {isUploading ? 'Отменить' : 'Удалить'}
+              </Button>
+            )}
+            {/* Показываем кнопку "Загрузить файл" только если файл не загружен успешно */}
+            {!fileUploaded && (
+              <Button 
+                size="small" 
+                variant="contained" 
+                onClick={uploadFile} 
+                disabled={isUploading}
+                color="primary"
+                sx={{ 
+                  minWidth: '130px',
+                  '&:hover': {
+                    bgcolor: 'primary.dark',
+                    boxShadow: '0 2px 8px 0 rgba(0,0,0,0.2)'
+                  },
+                  transition: 'all 0.2s' 
+                }}
+              >
+                {isUploading ? 'Загрузка...' : 'Загрузить файл'}
+              </Button>
+            )}
+          </Stack>
+
+          {showProgressBar && (
+            <Box>
+              <AnimatedLinearWithLabel variant="determinate" value={progress} />
+            </Box>
+          )}
+          
+          {uploadSuccess && (
+            <SuccessMessage>
+              <CheckCircleOutlined style={{ marginRight: 8 }} />
+              <Typography variant="subtitle2">Файл успешно загружен</Typography>
+            </SuccessMessage>
+          )}
+          
+          {uploadError && (
+            <ErrorMessage>
+              <CloseCircleOutlined style={{ marginRight: 8 }} />
+              <Typography variant="subtitle2">{errorMessage}</Typography>
+            </ErrorMessage>
+          )}
         </Stack>
       )}
     </>
   );
 }
-
-MultiFileUpload.propTypes = {
-  error: PropTypes.any,
-  showList: PropTypes.bool,
-  files: PropTypes.any,
-  type: PropTypes.any,
-  setFieldValue: PropTypes.any,
-  sx: PropTypes.any,
-  onUpload: PropTypes.any
-};

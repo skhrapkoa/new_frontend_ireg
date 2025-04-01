@@ -23,39 +23,36 @@ const staticMenuItem = {
   breadcrumbs: false
 };
 
-export function useGetMenu() {
-  const { data, isLoading, error, isValidating } = useSWR(endpoints.key + endpoints.dashboard, fetcher, {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false
-  });
-
-  const memoizedValue = useMemo(() => {
-    let updatedMenu = data?.dashboard;
-
-    if (updatedMenu && Array.isArray(updatedMenu.children) && updatedMenu.children.length > 0) {
-      updatedMenu = {
-        ...updatedMenu,
-        children: updatedMenu.children.map((group) => {
-          if (Array.isArray(group.children)) {
-            return {
-              ...group,
-              children: [...group.children, staticMenuItem]
-            };
-          }
-          return group;
-        })
-      };
+// Статическое меню дашборда, не требующее API-запросов
+const staticDashboardMenu = {
+  id: 'dashboard',
+  title: 'dashboard',
+  type: 'group',
+  icon: 'dashboard',
+  children: [
+    {
+      id: 'dashboard',
+      title: 'dashboard',
+      type: 'collapse',
+      icon: 'dashboard',
+      children: [
+        staticMenuItem
+      ]
     }
+  ]
+};
 
+export function useGetMenu() {
+  // Возвращаем статический объект меню вместо запроса к API
+  const memoizedValue = useMemo(() => {
     return {
-      menu: updatedMenu,
-      menuLoading: isLoading,
-      menuError: error,
-      menuValidating: isValidating,
-      menuEmpty: !isLoading && !data?.length
+      menu: staticDashboardMenu,
+      menuLoading: false,
+      menuError: null,
+      menuValidating: false,
+      menuEmpty: false
     };
-  }, [data, error, isLoading, isValidating]);
+  }, []);
 
   return memoizedValue;
 }

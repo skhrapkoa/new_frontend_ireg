@@ -75,16 +75,16 @@ const applications = {
       breadcrumbs: false
     },
     {
-      id: 'customer',
-      title: <FormattedMessage id="customer" />,
+      id: 'document',
+      title: <FormattedMessage id="Мои файлы" />,
       type: 'collapse',
       icon: icons.CustomerServiceOutlined,
       children: [
         {
-          id: 'customer-list',
+          id: 'document-list',
           title: <FormattedMessage id="list" />,
           type: 'item',
-          url: '/apps/customer/customer-list',
+          url: '/apps/document/document-list',
           actions: [
             {
               type: NavActionType.FUNCTION,
@@ -95,10 +95,10 @@ const applications = {
           ]
         },
         {
-          id: 'customer-card',
+          id: 'document-card',
           title: <FormattedMessage id="cards" />,
           type: 'item',
-          url: '/apps/customer/customer-card'
+          url: '/apps/document/document-card'
         }
       ]
     },

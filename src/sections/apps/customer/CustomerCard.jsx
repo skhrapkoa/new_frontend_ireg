@@ -40,10 +40,15 @@ import LinkOutlined from '@ant-design/icons/LinkOutlined';
 import MailOutlined from '@ant-design/icons/MailOutlined';
 import MoreOutlined from '@ant-design/icons/MoreOutlined';
 import PhoneOutlined from '@ant-design/icons/PhoneOutlined';
+import { FileIcon, defaultStyles } from 'react-file-icon';
+
+
 
 // ==============================|| CUSTOMER - CARD ||============================== //
 
-export default function CustomerCard({ customer }) {
+export default function CustomerCard({ document }) {
+  console.log('CustomerCard 1111')
+  console.log(document)
   const [open, setOpen] = useState(false);
   const [customerModal, setCustomerModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -74,9 +79,15 @@ export default function CustomerCard({ customer }) {
   };
 
   const editCustomer = () => {
-    setSelectedCustomer(customer);
+    setSelectedCustomer(document);
     setCustomerModal(true);
   };
+
+  const getFileExtension = (fileName) => {
+  if (!fileName) return ''; // Возвращаем пустую строку, если fileName отсутствует
+  return fileName.split('.').pop(); // Получение расширения файла
+};
+
 
   return (
     <>
@@ -92,16 +103,25 @@ export default function CustomerCard({ customer }) {
                   </IconButton>
                 }
               >
-                <ListItemAvatar>
-                  <Avatar alt={customer.name} src={getImageUrl(`avatar-${!customer.avatar ? 1 : customer.avatar}.png`, ImagePath.USERS)} />
+ <ListItemAvatar>
+<div style={{ width: '40px', height: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+<FileIcon
+  extension={getFileExtension(document?.name)}
+  {...defaultStyles[getFileExtension(document?.name)]}
+/>
+</div>
+
                 </ListItemAvatar>
                 <ListItemText
-                  primary={<Typography variant="subtitle1">{customer.name}</Typography>}
-                  secondary={
-                    <Typography variant="caption" color="secondary">
-                      {customer.role}
-                    </Typography>
-                  }
+                  primary={<Typography variant="subtitle1">{document.name}</Typography>}
+secondary={
+    <Chip
+      label={document.is_signed ? "Защищен" : "На рассмотрении"}
+      color={document.is_signed ? "success" : "info"}
+      size="small"
+      variant="light"
+    />
+  }
                 />
               </ListItem>
             </List>
@@ -124,7 +144,7 @@ export default function CustomerCard({ customer }) {
               }}
             >
               <MenuItem sx={{ a: { textDecoration: 'none', color: 'inherit' } }}>
-                <PDFDownloadLink document={<ListSmallCard customer={customer} />} fileName={`Customer-${customer.name}.pdf`}>
+                <PDFDownloadLink document={<ListSmallCard document={document} />} fileName={`Customer-${document.name}.pdf`}>
                   Export PDF
                 </PDFDownloadLink>
               </MenuItem>
@@ -136,7 +156,7 @@ export default function CustomerCard({ customer }) {
             <Divider />
           </Grid>
           <Grid item xs={12}>
-            <Typography>Hello, {customer.about}</Typography>
+            <Typography>Hello, {document.about}</Typography>
           </Grid>
           <Grid item xs={12}>
             <Grid container spacing={1}>
@@ -147,7 +167,7 @@ export default function CustomerCard({ customer }) {
                       <MailOutlined />
                     </ListItemIcon>
                     <ListItemText
-                      primary={customer.email}
+                      primary={document.email}
                       primaryTypographyProps={{ color: 'secondary', width: 'auto', sx: { overflow: 'hidden', textOverflow: 'ellipsis' } }}
                     />
                   </ListItem>
@@ -158,7 +178,7 @@ export default function CustomerCard({ customer }) {
                     <ListItemText
                       primary={
                         <Typography color="secondary">
-                          <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={customer.contact} />
+                          <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={document.contact} />
                         </Typography>
                       }
                     />
@@ -171,7 +191,7 @@ export default function CustomerCard({ customer }) {
                     <ListItemIcon>
                       <EnvironmentOutlined />
                     </ListItemIcon>
-                    <ListItemText primary={<Typography color="secondary">{customer.country}</Typography>} />
+                    <ListItemText primary={<Typography color="secondary">{document.country}</Typography>} />
                   </ListItem>
                   <ListItem alignItems="flex-start">
                     <ListItemIcon>
@@ -180,7 +200,7 @@ export default function CustomerCard({ customer }) {
                     <ListItemText
                       primary={
                         <Link href="https://google.com" target="_blank" sx={{ textTransform: 'lowercase' }}>
-                          https://{customer.firstName}.en
+                          https://{document.firstName}.en
                         </Link>
                       }
                     />
@@ -191,22 +211,22 @@ export default function CustomerCard({ customer }) {
           </Grid>
           <Grid item xs={12}>
             <Box>
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  listStyle: 'none',
-                  p: 0.5,
-                  m: 0
-                }}
-                component="ul"
-              >
-                {customer.skills.map((skill, index) => (
-                  <ListItem disablePadding key={index} sx={{ width: 'auto', pr: 0.75, pb: 0.75 }}>
-                    <Chip color="secondary" variant="outlined" size="small" label={skill} />
-                  </ListItem>
-                ))}
-              </Box>
+              {/*<Box*/}
+              {/*  sx={{*/}
+              {/*    display: 'flex',*/}
+              {/*    flexWrap: 'wrap',*/}
+              {/*    listStyle: 'none',*/}
+              {/*    p: 0.5,*/}
+              {/*    m: 0*/}
+              {/*  }}*/}
+              {/*  component="ul"*/}
+              {/*>*/}
+              {/*  {customer.skills.map((skill, index) => (*/}
+              {/*    <ListItem disablePadding key={index} sx={{ width: 'auto', pr: 0.75, pb: 0.75 }}>*/}
+              {/*      <Chip color="secondary" variant="outlined" size="small" label={skill} />*/}
+              {/*    </ListItem>*/}
+              {/*  ))}*/}
+              {/*</Box>*/}
             </Box>
           </Grid>
         </Grid>
@@ -219,7 +239,7 @@ export default function CustomerCard({ customer }) {
           sx={{ mt: 'auto', mb: 0, pt: 2.25 }}
         >
           <Typography variant="caption" color="secondary">
-            Updated in {customer.time}
+            Updated in {document.time}
           </Typography>
           <Button variant="outlined" size="small" onClick={handleClickOpen}>
             Preview
@@ -227,11 +247,11 @@ export default function CustomerCard({ customer }) {
         </Stack>
       </MainCard>
 
-      <CustomerPreview customer={customer} open={open} onClose={handleClose} editCustomer={editCustomer} />
-      <AlertCustomerDelete id={customer.id} title={customer.name} open={openAlert} handleClose={handleAlertClose} />
-      <CustomerModal open={customerModal} modalToggler={setCustomerModal} customer={selectedCustomer} />
+      <CustomerPreview document={document} open={open} onClose={handleClose} editCustomer={editCustomer} />
+      <AlertCustomerDelete id={document.id} title={document.name} open={openAlert} handleClose={handleAlertClose} />
+      <CustomerModal open={customerModal} modalToggler={setCustomerModal} document={selectedCustomer} />
     </>
   );
 }
 
-CustomerCard.propTypes = { customer: PropTypes.any };
+CustomerCard.propTypes = { document: PropTypes.any };

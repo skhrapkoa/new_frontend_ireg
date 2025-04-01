@@ -8,7 +8,7 @@ axiosServices.interceptors.request.use(
   async (config) => {
     const accessToken = localStorage.getItem('serviceToken');
     if (accessToken) {
-      config.headers['Authorization'] = `Bearer ${accessToken}`;
+      config.headers['Authorization'] = `JWT ${accessToken}`;
     }
     return config;
   },
@@ -20,12 +20,17 @@ axiosServices.interceptors.request.use(
 axiosServices.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response.status === 401 && !window.location.href.includes('/login')) {
-      window.location.pathname = '/maintenance/500';
+    if (error.response && error.response.status === 401) {
+      // Проверяем, находимся ли мы уже на странице логина
+      if (!window.location.href.includes('/login')) {
+        // Перенаправляем на страницу логина
+        window.location.pathname = '/login';
+      }
     }
     return Promise.reject((error.response && error.response.data) || 'Wrong Services');
   }
 );
+
 
 export default axiosServices;
 

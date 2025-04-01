@@ -10,7 +10,8 @@ import LoadingOutlined from '@ant-design/icons/LoadingOutlined';
 
 // type
 
-import { useGetMenu } from 'api/menu';
+// Удаляем импорт API, чтобы избежать запросов
+// import { useGetMenu } from 'api/menu';
 
 const icons = { dashboard: DashboardOutlined, components: GoldOutlined, loading: LoadingOutlined };
 
@@ -49,13 +50,13 @@ const loadingMenu = {
 };
 
 const defaultMenu = {
-  id: 'group-dashboard-loading',
+  id: 'group-dashboard',
   title: <FormattedMessage id="dashboard" />,
   type: 'group',
   icon: icons.dashboard,
   children: [
     {
-      id: 'dashboard1',
+      id: 'dashboard',
       title: <FormattedMessage id="dashboard" />,
       type: 'collapse',
       icon: icons.dashboard,
@@ -67,36 +68,12 @@ const defaultMenu = {
 // ==============================|| MENU ITEMS - API ||============================== //
 
 export function MenuFromAPI() {
-  const { menu, menuLoading } = useGetMenu();
-
-  if (menuLoading) return loadingMenu;
-
-  const subChildrenList = (children) => {
-    return children?.map((subList) => {
-      return fillItem(subList);
-    });
-  };
-
-  const itemList = (subList) => {
-    let list = fillItem(subList);
-
-    // if collapsible item, we need to feel its children as well
-    if (subList.type === 'collapse') {
-      list.children = subChildrenList(subList.children);
-    }
-    return list;
-  };
-
-  const childrenList = menu?.children?.map((subList) => {
-    return itemList(subList);
-  });
-
-  if (!childrenList?.length) return defaultMenu;
-
-  let menuList = fillItem(menu, childrenList);
-  return menuList;
+  // Всегда возвращаем статический объект меню
+  return defaultMenu;
 }
 
+// Удаляем ненужные функции, которые работали с API
+/*
 function fillItem(item, children) {
   return {
     ...item,
@@ -106,3 +83,4 @@ function fillItem(item, children) {
     ...(children && { children })
   };
 }
+*/

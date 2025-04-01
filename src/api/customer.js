@@ -9,15 +9,16 @@ const initialState = {
 };
 
 export const endpoints = {
-  key: 'api/customer',
-  list: '/list', // server URL
+  key: '/api/v1',
+  list: '/project/documents/', // server URL
   modal: '/modal', // server URL
   insert: '/insert', // server URL
   update: '/update', // server URL
   delete: '/delete' // server URL
 };
-
+// /api/v1/project/documents/
 export function useGetCustomer() {
+
   const { data, isLoading, error, isValidating } = useSWR(endpoints.key + endpoints.list, fetcher, {
     revalidateIfStale: false,
     revalidateOnFocus: false,
@@ -26,7 +27,7 @@ export function useGetCustomer() {
 
   const memoizedValue = useMemo(
     () => ({
-      customers: data?.customers,
+      documents: data?.results,
       customersLoading: isLoading,
       customersError: error,
       customersValidating: isValidating,

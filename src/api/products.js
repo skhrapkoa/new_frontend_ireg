@@ -3,7 +3,7 @@ import axios from 'utils/axios';
 // ⬇️ this is the loader for the detail route
 export async function loader() {
   try {
-    const response = await axios.get('/api/products/list');
+    const response = await axios.get('/api/v1/users/me/');
     return response.data.products;
   } catch (error) {
     return error;
