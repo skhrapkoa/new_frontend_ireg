@@ -42,6 +42,7 @@ const setSession = (serviceToken) => {
     axios.defaults.headers.common.Authorization = `JWT ${serviceToken}`;
   } else {
     localStorage.removeItem('serviceToken');
+    localStorage.removeItem('userData'); // Also clear userData when logging out
     delete axios.defaults.headers.common.Authorization;
   }
 };
@@ -63,8 +64,14 @@ export const JWTProvider = ({ children }) => {
               // Шаг 2: Получение информации о пользователе
           const userResponse = await axios.get('/api/v1/users/me/');
           console.log(userResponse.data);
+          
+          // Log the project_id for debugging
+          console.log('Project ID from user data:', userResponse.data.project_id);
 
           const user = userResponse.data;
+          
+          // Store user data in localStorage for easy access
+          localStorage.setItem('userData', JSON.stringify(user));
 
           //
           // const response = await axios.get('/api/v1/users/me/');
@@ -109,6 +116,9 @@ const login = async (email, password) => {
     console.log(userResponse.data);
 
     const user = userResponse.data;
+    
+    // Store user data in localStorage for easy access
+    localStorage.setItem('userData', JSON.stringify(user));
 
     // Обновление состояния
     dispatch({

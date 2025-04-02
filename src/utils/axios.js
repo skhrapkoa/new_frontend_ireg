@@ -1,36 +1,53 @@
 import axios from 'axios';
 
-const axiosServices = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL || 'http://localhost:3010/' });
+/**
+ * axios setup
+ */
+const axiosServices = axios.create({ baseURL: 'http://127.0.0.1:8000' });
 
 // ==============================|| AXIOS - FOR MOCK SERVICES ||============================== //
 
 axiosServices.interceptors.request.use(
   async (config) => {
+    // Add authorization header
     const accessToken = localStorage.getItem('serviceToken');
     if (accessToken) {
       config.headers['Authorization'] = `JWT ${accessToken}`;
     }
+
+    // Get project_id from localStorage if available
+    try {
+      const userDataString = localStorage.getItem('userData');
+      if (userDataString) {
+        const userData = JSON.parse(userDataString);
+        const projectId = userData.project_id;
+        
+        // Check if URL contains '/project/' and inject project_id
+        if (projectId && config.url && config.url.includes('/project/')) {
+          // Replace generic project path with project-specific path
+          config.url = config.url.replace('/project/', `/project/${projectId}/`);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing project ID for request:', error);
+    }
+    
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
+// interceptor for response
 axiosServices.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Проверяем, находимся ли мы уже на странице логина
-      if (!window.location.href.includes('/login')) {
-        // Перенаправляем на страницу логина
-        window.location.pathname = '/login';
-      }
+    if (error.response && error.response.status === 401 && !window.location.href.includes('/login')) {
+      sessionStorage.setItem('returnUrl', window.location.pathname);
+      window.location.replace('/login');
     }
     return Promise.reject((error.response && error.response.data) || 'Wrong Services');
   }
 );
-
 
 export default axiosServices;
 

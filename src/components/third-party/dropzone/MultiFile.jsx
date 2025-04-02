@@ -123,6 +123,28 @@ export default function MultiFileUpload({
     }
   });
 
+  // Проверка доступности сервера перед загрузкой
+  const checkServerAvailability = async () => {
+    try {
+      // Получаем из localStorage объект пользователя
+      const userDataString = localStorage.getItem('userData');
+      if (!userDataString) {
+        throw new Error('Необходима авторизация. Пожалуйста, войдите в систему.');
+      }
+      
+      // Проверяем наличие токена - это минимальная проверка перед загрузкой
+      const accessToken = localStorage.getItem('serviceToken');
+      if (!accessToken) {
+        throw new Error('Необходима авторизация. Пожалуйста, войдите в систему.');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Server availability check failed:', error);
+      return false;
+    }
+  };
+
   const uploadFile = async () => {
     if (!files || files.length === 0) {
       console.error('No file to upload');
@@ -133,6 +155,14 @@ export default function MultiFileUpload({
     setUploadSuccess(false);
     setUploadError(false);
     setErrorMessage('');
+
+    // Проверяем доступность сервера перед началом загрузки
+    const isServerAvailable = await checkServerAvailability();
+    if (!isServerAvailable) {
+      setUploadError(true);
+      setErrorMessage('Сервер недоступен. Проверьте подключение или войдите в систему повторно.');
+      return;
+    }
 
     const file = files[0];
     onUploading?.(); // Начало загрузки
@@ -182,8 +212,9 @@ export default function MultiFileUpload({
           }, 500);
         } else {
           console.error('Failed to upload file');
+          // Устанавливаем ошибку
           setUploadError(true);
-          setErrorMessage('Ошибка загрузки файла. Пожалуйста, попробуйте снова.');
+          setErrorMessage(getErrorMessage(xhr.status));
           handleUploadError(xhr.status, 'Failed to upload file');
         }
         setIsUploading(false);
@@ -192,6 +223,7 @@ export default function MultiFileUpload({
 
       xhr.onerror = () => {
         console.error('Error during file upload');
+        // Устанавливаем ошибку
         setUploadError(true);
         setErrorMessage('Произошла ошибка при загрузке файла.');
         handleUploadError(xhr.status, 'Error during file upload');
@@ -202,14 +234,8 @@ export default function MultiFileUpload({
       xhr.send(file); // Загружаем файл
     } catch (error) {
       console.error('Error uploading file:', error);
-      setIsUploading(false);
-      setUploadError(true);
-      setErrorMessage('Не удалось начать загрузку файла.');
-      
-      // Если ошибка связана с авторизацией - перенаправляем на логин
-      if (error.message && error.message.includes('Authentication token')) {
-        redirectToLogin();
-      }
+      // Используем новую функцию обработки ошибок инициализации
+      handleInitError(error);
     }
   };
 
@@ -226,10 +252,63 @@ export default function MultiFileUpload({
     }
   };
 
-  // Функция обработки ошибок загрузки
+  // Функция для получения понятного сообщения об ошибке на основе HTTP-статуса
+  const getErrorMessage = (status) => {
+    switch (status) {
+      case 400: return 'Ошибка в запросе. Неверные данные.';
+      case 401: return 'Необходима авторизация. Пожалуйста, войдите в систему.';
+      case 403: return 'Доступ запрещён. У вас нет прав для выполнения этой операции.';
+      case 404: return 'Ресурс не найден. Файл не может быть загружен.';
+      case 413: return 'Файл слишком большой для загрузки.';
+      case 500: return 'Внутренняя ошибка сервера. Пожалуйста, попробуйте позже.';
+      case 502: return 'Сервер временно недоступен. Пожалуйста, попробуйте позже.';
+      case 503: return 'Сервис недоступен. Пожалуйста, попробуйте позже.';
+      case 504: return 'Превышено время ожидания ответа от сервера. Пожалуйста, попробуйте позже.';
+      default: return `Ошибка загрузки (${status}). Пожалуйста, попробуйте снова.`;
+    }
+  };
+
+  // Функция обработки ошибок загрузки с плавным скрытием прогресс-бара
   const handleUploadError = (status, message) => {
+    // Если прогресс-бар показан, плавно скрываем его
+    if (showProgressBar) {
+      // Показываем ошибку в прогресс-баре с задержкой
+      setTimeout(() => {
+        setShowProgressBar(false);
+      }, 300);
+    }
+    
     // Если ошибка 401 - перенаправляем на страницу логина
     if (status === 401) {
+      redirectToLogin();
+    }
+  };
+
+  // Обработка ошибок при инициализации загрузки
+  const handleInitError = (error) => {
+    setIsUploading(false);
+    setUploadError(true);
+    
+    // Определяем тип ошибки и устанавливаем соответствующее сообщение
+    if (error.status) {
+      setErrorMessage(getErrorMessage(error.status));
+    } else if (error.message) {
+      setErrorMessage(error.message.includes('Authentication token') ? 
+        'Ошибка авторизации. Пожалуйста, войдите в систему повторно.' : 
+        'Не удалось начать загрузку файла.');
+    } else {
+      setErrorMessage('Не удалось начать загрузку файла.');
+    }
+    
+    // Если прогресс-бар показан, плавно скрываем его
+    if (showProgressBar) {
+      setTimeout(() => {
+        setShowProgressBar(false);
+      }, 300);
+    }
+    
+    // Если ошибка связана с авторизацией - перенаправляем на логин
+    if (error.message && error.message.includes('Authentication token')) {
       redirectToLogin();
     }
   };
@@ -418,19 +497,22 @@ export default function MultiFileUpload({
             )}
           </Stack>
 
+          {/* Показываем прогресс-бар только если нет ошибок */}
           {showProgressBar && (
             <Box>
-              <AnimatedLinearWithLabel variant="determinate" value={progress} />
+              <AnimatedLinearWithLabel variant="determinate" value={progress} error={uploadError} />
             </Box>
           )}
           
-          {uploadSuccess && (
+          {/* Показываем сообщение об успехе только если нет ошибок */}
+          {uploadSuccess && !uploadError && (
             <SuccessMessage>
               <CheckCircleOutlined style={{ marginRight: 8 }} />
               <Typography variant="subtitle2">Файл успешно загружен</Typography>
             </SuccessMessage>
           )}
           
+          {/* Показываем сообщение об ошибке */}
           {uploadError && (
             <ErrorMessage>
               <CloseCircleOutlined style={{ marginRight: 8 }} />

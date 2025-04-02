@@ -17,6 +17,9 @@ import { JWTProvider as AuthProvider } from 'contexts/JWTContext';
 // import { AWSCognitoProvider as AuthProvider } from 'contexts/AWSCognitoContext';
 // import { SupabseProvider as AuthProvider } from 'contexts/SupabaseContext';
 
+// project-provider
+import { ProjectProvider } from 'contexts/ProjectContext';
+
 // ==============================|| APP - THEME, ROUTER, LOCAL ||============================== //
 
 export default function App() {
@@ -26,12 +29,12 @@ export default function App() {
         <Locales>
           <ScrollTop>
             <AuthProvider>
-              <>
+              <ProjectProvider>
                 <Notistack>
                   <RouterProvider router={router} />
                   <Snackbar />
                 </Notistack>
-              </>
+              </ProjectProvider>
             </AuthProvider>
           </ScrollTop>
         </Locales>

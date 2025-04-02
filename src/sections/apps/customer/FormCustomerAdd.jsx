@@ -47,6 +47,8 @@ import { ThemeMode, Gender } from 'config';
 import { openSnackbar } from 'api/snackbar';
 import { insertCustomer, updateCustomer } from 'api/customer';
 import { getImageUrl, ImagePath } from 'utils/getImageUrl';
+import { projectFetch } from 'utils/project-api';
+import useProjectApi from 'hooks/useProjectApi';
 
 // assets
 import CameraOutlined from '@ant-design/icons/CameraOutlined';
@@ -129,6 +131,7 @@ const getInitialValues = (customer) => {
     category: '',
     authors: [],
     owners: [],
+    files: [],
     firstName: '',
     lastName: '',
     name: '',
@@ -176,9 +179,13 @@ const formatFileSize = (size) => {
 
 export default function FormCustomerAdd({ customer, closeModal }) {
   const theme = useTheme();
+  const { fetchData } = useProjectApi();
 
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(undefined);
+  const [categories, setCategories] = useState([]); // Состояние для хранения категорий
+  const [loadingCategories, setLoadingCategories] = useState(true); // Загрузка категорий
+  const [categoryError, setCategoryError] = useState(false); // Ошибка загрузки категорий
   const [avatar, setAvatar] = useState(
     getImageUrl(`avatar-${customer && customer !== null && customer?.avatar ? customer.avatar : 1}.png`, ImagePath.USERS)
   );
@@ -189,9 +196,27 @@ export default function FormCustomerAdd({ customer, closeModal }) {
     }
   }, [selectedImage]);
 
+  // Загружаем категории с бэкенда
   useEffect(() => {
+    const fetchCategories = async () => {
+      setLoadingCategories(true);
+      setCategoryError(false);
+      try {
+        const result = await fetchData('/api/v1/categories_document/');
+        if (Array.isArray(result)) {
+          setCategories(result);
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке категорий:', error);
+        setCategoryError(true);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
     setLoading(false);
-  }, []);
+  }, [fetchData]);
 
   const CustomerSchema = Yup.object().shape({
     name: Yup.string().max(255).required('Название обязательно'),
@@ -218,6 +243,10 @@ export default function FormCustomerAdd({ customer, closeModal }) {
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
       try {
+        // Логируем все значения для отладки
+        console.log('Form submitted with values:', values);
+        console.log('Category value:', values.category);
+        
         let newCustomer = values;
         newCustomer.name = newCustomer.firstName + ' ' + newCustomer.lastName;
 
@@ -267,34 +296,54 @@ export default function FormCustomerAdd({ customer, closeModal }) {
       </Box>
     );
 
-    const getPresignedUrl = async (file) => {
+  const getPresignedUrl = async (file) => {
     try {
-      // Получаем токен из localStorage
-      const accessToken = localStorage.getItem('serviceToken');
-      
-      if (!accessToken) {
-        throw new Error('Authentication token not found. Please login again.');
-      }
-      
-      const response = await fetch('http://127.0.0.1:8000/api/v1/project/documents/create_s3/', {
+      // Get project-specific URL using the fetchData function
+      const data = await fetchData('/api/v1/project/documents/create_s3/', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `JWT ${accessToken}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ name_aws: file.name })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch presigned URL');
+      
+      if (!data || !data.url) {
+        throw new Error('Получен некорректный ответ от сервера');
       }
-
-      const data = await response.json();
+      
       return { id: data.id, url: data.url, price: data.price };
     } catch (error) {
       console.error('Error getting presigned URL:', error);
+      
+      // Проверяем наличие ответа от сервера и HTTP-статуса
+      if (error.status) {
+        // Обрабатываем различные HTTP ошибки
+        switch (error.status) {
+          case 401:
+            throw new Error('Необходима авторизация. Пожалуйста, войдите в систему.');
+          case 403:
+            throw new Error('У вас нет прав для загрузки файлов.');
+          case 404:
+            throw new Error('Сервис загрузки не найден. Обратитесь к администратору.');
+          case 500:
+            throw new Error('Внутренняя ошибка сервера. Повторите попытку позже.');
+          default:
+            throw new Error(`Ошибка сервера: ${error.status}`);
+        }
+      } else if (error.message && error.message.includes('Failed to fetch')) {
+        // Проблемы с сетью
+        throw new Error('Не удалось подключиться к серверу. Проверьте интернет-соединение.');
+      }
+      
+      // Если дошли до сюда, значит другая ошибка
       throw error;
     }
+  };
+
+  // Новая функция для обработки изменения категории
+  const handleCategoryChange = (event) => {
+    console.log('Selected category:', event.target.value);
+    setFieldValue('category', event.target.value);
   };
 
   return (
@@ -305,28 +354,26 @@ export default function FormCustomerAdd({ customer, closeModal }) {
             <DialogTitle>{customer ? 'Редактирование объекта' : 'Регистрация объекта'}</DialogTitle>
             <Divider />
             <DialogContent sx={{ p: 2.5 }}>
-<Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <UploadMultiFile
+                    error={touched.files && !!errors.files}
+                    files={formik.values.files}
+                    setFieldValue={setFieldValue}
+                    onGetAction={getPresignedUrl}
+                    onUploading={() => console.log('Uploading started')}
+                    onCreated={(id, price) => console.log(`File created: ID ${id}, price ${price}`)}
+                    onSuccess={() => console.log('File uploaded successfully')}
+                    onChange={(newFiles) => setFieldValue('files', newFiles)}
+                  />
+                  {(!formik.values.files || (Array.isArray(formik.values.files) && formik.values.files.length === 0)) && (
+                    <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 1, color: 'text.secondary' }}>
+                      Загрузите файлы содержащие объект. Это могут быть документы или изображения
+                    </Typography>
+                  )}
+                </Grid>
 
-                <UploadMultiFile
-                  error={touched.files && !!errors.files}
-                  files={formik.values.files}
-                  setFieldValue={setFieldValue}
-                  onGetAction={getPresignedUrl}
-                  onUploading={() => console.log('Uploading started')}
-                  onCreated={(id, price) => console.log(`File created: ID ${id}, price ${price}`)}
-                  onSuccess={() => console.log('File uploaded successfully')}
-                  onChange={(newFiles) => setFieldValue('files', newFiles)}
-                />
-                {(!formik.values.files || (Array.isArray(formik.values.files) && formik.values.files.length === 0)) && (
-                  <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', mt: 1, color: 'text.secondary' }}>
-                    Загрузите файлы содержащие объект. Это могут быть документы или изображения
-                  </Typography>
-                )}
-              </Grid>
-
-
-              <Grid item xs={12}>
+                <Grid item xs={12}>
                   <Stack spacing={1}>
                     <InputLabel htmlFor="name">* Название</InputLabel>
                     <TextField
@@ -353,13 +400,13 @@ export default function FormCustomerAdd({ customer, closeModal }) {
                         input={<OutlinedInput id="select-type" placeholder="Выберите тип" />}
                         renderValue={(selected) => {
                           if (!selected) {
-                            return <Typography variant="subtitle1">Выберите тип</Typography>;
+                            return <Typography variant="body1">Выберите тип</Typography>;
                           }
-                          return <Typography variant="subtitle2">{DocumentTypes[selected]}</Typography>;
+                          return <Typography variant="body1">{DocumentTypes[selected]}</Typography>;
                         }}
                       >
                         <MenuItem disabled value="">
-                          <Typography variant="subtitle1">Выберите тип</Typography>
+                          <Typography variant="body1">Выберите тип</Typography>
                         </MenuItem>
                         {Object.entries(DocumentTypes).map(([key, value]) => (
                           <MenuItem key={key} value={key}>
@@ -376,36 +423,64 @@ export default function FormCustomerAdd({ customer, closeModal }) {
                   </Stack>
                 </Grid>
 
-                {/* Категория */}
+                {/* Категория - теперь загружается с бэкенда */}
                 <Grid item xs={12}>
                   <Stack spacing={1}>
                     <InputLabel htmlFor="category">Категория</InputLabel>
-                    <FormControl fullWidth error={Boolean(touched.category && errors.category)}>
+                    <FormControl fullWidth error={Boolean(touched.category && errors.category) || categoryError}>
                       <Select
                         id="category"
                         displayEmpty
                         {...getFieldProps('category')}
-                        onChange={(e) => setFieldValue('category', e.target.value)}
+                        onChange={handleCategoryChange}
                         input={<OutlinedInput id="select-category" placeholder="Выберите категорию" />}
+                        disabled={loadingCategories}
                         renderValue={(selected) => {
+                          if (loadingCategories) return <Typography variant="body1">Загрузка категорий...</Typography>;
                           if (!selected) {
-                            return <Typography variant="subtitle1">Выберите категорию</Typography>;
+                            return <Typography variant="body1">Выберите категорию</Typography>;
                           }
-                          return <Typography variant="subtitle2">{DocumentTypes[selected]}</Typography>;
+                          // Ищем категорию в массиве категорий
+                          const selectedId = String(selected);
+                          const selectedCategory = categories.find(cat => String(cat.id) === selectedId);
+                          return <Typography variant="body1">{selectedCategory?.name || ""}</Typography>;
                         }}
                       >
-                        <MenuItem disabled value="">
-                          <Typography variant="subtitle1">Выберите категорию</Typography>
-                        </MenuItem>
-                        {Object.entries(DocumentTypes).map(([key, value]) => (
-                          <MenuItem key={key} value={key}>
-                            <ListItemText primary={value} />
+                        {loadingCategories && (
+                          <MenuItem disabled>
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 1 }}>
+                              <CircularWithPath size={16} />
+                              <Typography variant="body1">Загрузка категорий...</Typography>
+                            </Stack>
+                          </MenuItem>
+                        )}
+                        
+                        {categoryError && (
+                          <MenuItem disabled>
+                            <Typography color="error" variant="body1">Ошибка загрузки категорий</Typography>
+                          </MenuItem>
+                        )}
+                        
+                        {!loadingCategories && !categoryError && (
+                          <MenuItem disabled value="">
+                            <Typography variant="body1">Выберите категорию</Typography>
+                          </MenuItem>
+                        )}
+                        
+                        {!loadingCategories && !categoryError && categories.map((category) => (
+                          <MenuItem key={category.id} value={category.id.toString()}>
+                            <ListItemText primary={category.name} />
                           </MenuItem>
                         ))}
                       </Select>
-                      {touched.category && errors.category && (
+                      {(touched.category && errors.category) && (
                         <FormHelperText error id="category-error">
                           {errors.category}
+                        </FormHelperText>
+                      )}
+                      {categoryError && (
+                        <FormHelperText error>
+                          Не удалось загрузить категории. Пожалуйста, попробуйте позже.
                         </FormHelperText>
                       )}
                     </FormControl>
