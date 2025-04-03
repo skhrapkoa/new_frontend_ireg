@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback, forwardRef } from 'react';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -186,6 +186,15 @@ export default function FormCustomerAdd({ customer, closeModal }) {
   const [categories, setCategories] = useState([]); // Состояние для хранения категорий
   const [loadingCategories, setLoadingCategories] = useState(true); // Загрузка категорий
   const [categoryError, setCategoryError] = useState(false); // Ошибка загрузки категорий
+  
+  // Новые состояния для авторов и правообладателей
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersPage, setMembersPage] = useState(1);
+  const [hasMoreMembers, setHasMoreMembers] = useState(true);
+  const [membersSearch, setMembersSearch] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  
   const [avatar, setAvatar] = useState(
     getImageUrl(`avatar-${customer && customer !== null && customer?.avatar ? customer.avatar : 1}.png`, ImagePath.USERS)
   );
@@ -217,6 +226,118 @@ export default function FormCustomerAdd({ customer, closeModal }) {
     fetchCategories();
     setLoading(false);
   }, [fetchData]);
+
+  // Загружаем участников проекта
+  const fetchMembers = useCallback(async (page = 1, searchParams = {}) => {
+    try {
+      setMembersLoading(true);
+      
+      // Формируем строку запроса с параметрами поиска
+      let queryParams = [`page=${page}`];
+      
+      if (searchParams.last_name) {
+        queryParams.push(`last_name=${encodeURIComponent(searchParams.last_name)}`);
+      }
+      
+      if (searchParams.first_name) {
+        queryParams.push(`first_name=${encodeURIComponent(searchParams.first_name)}`);
+      }
+      
+      if (searchParams.middle_name) {
+        queryParams.push(`middle_name=${encodeURIComponent(searchParams.middle_name)}`);
+      }
+      
+      console.log(`Загружаем участников: страница ${page}, параметры:`, searchParams);
+      
+      const queryString = queryParams.join('&');
+      const response = await fetchData(`/api/v1/project/members/?${queryString}`);
+      
+      if (response && response.results) {
+        console.log(`Загружено ${response.results.length} участников. Есть следующая страница: ${!!response.next}`);
+        if (page === 1) {
+          setMembers(response.results);
+        } else {
+          setMembers((prev) => [...prev, ...response.results]);
+        }
+        setHasMoreMembers(!!response.next);
+      } else {
+        console.log('Нет результатов или некорректный ответ от API');
+        setHasMoreMembers(false);
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке участников:', error);
+      setHasMoreMembers(false);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [fetchData]);
+
+  // Загружаем участников при первой загрузке
+  useEffect(() => {
+    fetchMembers(1, {});
+  }, [fetchMembers]);
+
+  // Интеллектуальный анализ поискового запроса
+  const parseSearchQuery = (query) => {
+    // Очищаем строку от лишних пробелов и приводим к нижнему регистру
+    const cleanQuery = query.trim();
+    
+    if (!cleanQuery) {
+      return {}; // Пустой запрос
+    }
+
+    // Разделяем запрос на слова
+    const words = cleanQuery.split(/\s+/);
+    
+    // Если одно слово - считаем его фамилией
+    if (words.length === 1) {
+      return { last_name: words[0] };
+    }
+    
+    // Если два слова - считаем их фамилией и именем
+    if (words.length === 2) {
+      return {
+        last_name: words[0],
+        first_name: words[1]
+      };
+    }
+    
+    // Если три и более слова - используем первые три как фамилию, имя и отчество
+    return {
+      last_name: words[0],
+      first_name: words[1],
+      middle_name: words[2]
+    };
+  };
+
+  // Обработчик изменения поискового запроса
+  const handleMembersSearch = (search) => {
+    setMembersSearch(search);
+    
+    // Отменяем предыдущий таймаут, если он был
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Создаем новый таймаут для задержки запроса
+    const timeout = setTimeout(() => {
+      setMembersPage(1);
+      const searchParams = parseSearchQuery(search);
+      fetchMembers(1, searchParams);
+    }, 500); // Задержка 500мс
+    
+    setSearchTimeout(timeout);
+  };
+
+  // Функция для загрузки дополнительных участников при скролле
+  const loadMoreMembers = () => {
+    if (!membersLoading && hasMoreMembers) {
+      const nextPage = membersPage + 1;
+      setMembersPage(nextPage);
+      const searchParams = parseSearchQuery(membersSearch);
+      fetchMembers(nextPage, searchParams);
+    }
+  };
 
   const CustomerSchema = Yup.object().shape({
     name: Yup.string().max(255).required('Название обязательно'),
@@ -495,25 +616,71 @@ export default function FormCustomerAdd({ customer, closeModal }) {
                       multiple
                       fullWidth
                       id="authors"
-                      options={skills}
+                      options={members}
                       {...getFieldProps('authors')}
-                      getOptionLabel={(label) => label}
+                      getOptionLabel={(option) => typeof option === 'string' ? option : option.get_fullname}
+                      isOptionEqualToValue={(option, value) => 
+                        option.id === value.id || option === value
+                      }
                       onChange={(event, newValue) => {
                         setFieldValue('authors', newValue);
                       }}
-                      renderInput={(params) => <TextField {...params} name="authors" placeholder="Выберите или добавьте авторов" />}
+                      onInputChange={(event, value) => {
+                        if (event) {
+                          handleMembersSearch(value);
+                        }
+                      }}
+                      filterOptions={(options) => options}
+                      loading={membersLoading}
+                      ListboxProps={{
+                        onScroll: (event) => {
+                          const target = event.currentTarget;
+                          if (
+                            Math.abs(
+                              target.scrollHeight - target.clientHeight - target.scrollTop
+                            ) < 50 &&
+                            hasMoreMembers &&
+                            !membersLoading
+                          ) {
+                            console.log('Загружаем больше участников (авторы)...');
+                            loadMoreMembers();
+                          }
+                        },
+                        style: { maxHeight: '200px' },
+                      }}
+                      renderInput={(params) => (
+                        <TextField 
+                          {...params} 
+                          name="authors" 
+                          placeholder="Выберите или добавьте авторов" 
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {membersLoading ? <CircularWithPath size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            )
+                          }}
+                        />
+                      )}
                       renderTags={(value, getTagProps) =>
                         value.map((option, index) => (
                           <Chip
                             {...getTagProps({ index })}
                             variant="combined"
                             key={index}
-                            label={option}
+                            label={typeof option === 'string' ? option : option.get_fullname}
                             deleteIcon={<CloseOutlined style={{ fontSize: '0.75rem' }} />}
                             sx={{ color: 'text.primary' }}
                           />
                         ))
                       }
+                      renderOption={(props, option) => (
+                        <li {...props} key={option.id}>
+                          {option.get_fullname}
+                        </li>
+                      )}
                     />
                     <Typography variant="caption" color="error">
                       Важно!
@@ -529,25 +696,71 @@ export default function FormCustomerAdd({ customer, closeModal }) {
                       multiple
                       fullWidth
                       id="owners"
-                      options={skills}
+                      options={members}
                       {...getFieldProps('owners')}
-                      getOptionLabel={(label) => label}
+                      getOptionLabel={(option) => typeof option === 'string' ? option : option.get_fullname}
+                      isOptionEqualToValue={(option, value) => 
+                        option.id === value.id || option === value
+                      }
                       onChange={(event, newValue) => {
                         setFieldValue('owners', newValue);
                       }}
-                      renderInput={(params) => <TextField {...params} name="owners" placeholder="Выберите или добавьте правообладателей" />}
+                      onInputChange={(event, value) => {
+                        if (event) {
+                          handleMembersSearch(value);
+                        }
+                      }}
+                      filterOptions={(options) => options}
+                      loading={membersLoading}
+                      ListboxProps={{
+                        onScroll: (event) => {
+                          const target = event.currentTarget;
+                          if (
+                            Math.abs(
+                              target.scrollHeight - target.clientHeight - target.scrollTop
+                            ) < 50 &&
+                            hasMoreMembers &&
+                            !membersLoading
+                          ) {
+                            console.log('Загружаем больше участников (правообладатели)...');
+                            loadMoreMembers();
+                          }
+                        },
+                        style: { maxHeight: '200px' },
+                      }}
+                      renderInput={(params) => (
+                        <TextField 
+                          {...params} 
+                          name="owners" 
+                          placeholder="Выберите или добавьте правообладателей" 
+                          InputProps={{
+                            ...params.InputProps,
+                            endAdornment: (
+                              <>
+                                {membersLoading ? <CircularWithPath size={20} /> : null}
+                                {params.InputProps.endAdornment}
+                              </>
+                            )
+                          }}
+                        />
+                      )}
                       renderTags={(value, getTagProps) =>
                         value.map((option, index) => (
                           <Chip
                             {...getTagProps({ index })}
                             variant="combined"
                             key={index}
-                            label={option}
+                            label={typeof option === 'string' ? option : option.get_fullname}
                             deleteIcon={<CloseOutlined style={{ fontSize: '0.75rem' }} />}
                             sx={{ color: 'text.primary' }}
                           />
                         ))
                       }
+                      renderOption={(props, option) => (
+                        <li {...props} key={option.id}>
+                          {option.get_fullname}
+                        </li>
+                      )}
                     />
                     <Typography variant="caption" color="error">
                       Важно!
