@@ -31,6 +31,9 @@ import Chip from '@mui/material/Chip';
 
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
+import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { MobileDatePicker } from '@mui/x-date-pickers/MobileDatePicker';
 
 // third-party
 import _ from 'lodash';
@@ -151,7 +154,8 @@ const getInitialValues = (customer) => {
     about: '',
     skills: [],
     time: ['just now'],
-    date: ''
+    date: '',
+    dueDate: null
   };
 
   if (customer) {
@@ -765,6 +769,27 @@ export default function FormCustomerAdd({ customer, closeModal }) {
                     <Typography variant="caption" color="error">
                       Важно!
                     </Typography>
+                  </Stack>
+                </Grid>
+                
+                {/* Срок окончания */}
+                <Grid item xs={12}>
+                  <Stack spacing={1}>
+                    <InputLabel htmlFor="dueDate">Дата создания</InputLabel>
+                    <MobileDatePicker
+                      value={formik.values.dueDate}
+                      format="dd/MM/yyyy"
+                      onChange={(date) => {
+                        formik.setFieldValue('dueDate', date);
+                      }}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          error: Boolean(touched.dueDate && errors.dueDate),
+                          helperText: touched.dueDate && errors.dueDate
+                        }
+                      }}
+                    />
                   </Stack>
                 </Grid>
               
