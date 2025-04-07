@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { useEffect, useState, useRef, useCallback, forwardRef } from 'react';
+import { useEffect, useState, useRef, useCallback, forwardRef, useMemo } from 'react';
 
 // material-ui
 import { useTheme } from '@mui/material/styles';
@@ -127,6 +127,47 @@ const DocumentTypes = {
   project_documentation: 'Проектная документация',
 };
 
+// Добавляем константы для услуг и цен
+const SERVICES = {
+  ELECTRONIC_RU: 'electronic_ru',
+  ELECTRONIC_EN: 'electronic_en',
+  PRINTED_EN: 'printed_en',
+  PRINTED_RU: 'printed_ru',
+  CERTIFIED_COPY: 'certified_copy',
+  CONFIRMATION_LETTER: 'confirmation_letter'
+};
+
+const SERVICE_PRICES = {
+  [SERVICES.ELECTRONIC_RU]: 3000,
+  [SERVICES.ELECTRONIC_EN]: 3000,
+  [SERVICES.PRINTED_EN]: 4000,
+  [SERVICES.PRINTED_RU]: 4000,
+  [SERVICES.CERTIFIED_COPY]: 4000,
+  [SERVICES.CONFIRMATION_LETTER]: 1000
+};
+
+const SERVICE_NAMES = {
+  [SERVICES.ELECTRONIC_RU]: 'Электронное свидетельство о депонировании на русском языке',
+  [SERVICES.ELECTRONIC_EN]: 'Электронное свидетельство о депонировании на английском языке',
+  [SERVICES.PRINTED_EN]: 'Печатное свидетельство о депонировании на английском языке',
+  [SERVICES.PRINTED_RU]: 'Печатное свидетельство о депонировании на русском языке',
+  [SERVICES.CERTIFIED_COPY]: 'Заверенный экземпляр произведения',
+  [SERVICES.CONFIRMATION_LETTER]: 'Подтверждающее письмо (PDF)'
+};
+
+// Схема валидации, вынесенная из компонента
+const CustomerSchema = Yup.object().shape({
+  name: Yup.string().max(255).required('Название обязательно'),
+  type: Yup.string().required('Тип обязательно указать'),
+  category: Yup.string(),
+  firstName: Yup.string().max(255).required('First Name is required'),
+  lastName: Yup.string().max(255).required('Last Name is required'),
+  email: Yup.string().max(255).required('Email is required').email('Must be a valid email'),
+  status: Yup.string().required('Status is required'),
+  location: Yup.string().max(500),
+  about: Yup.string().max(500)
+});
+
 // constant
 const getInitialValues = (customer) => {
   const newCustomer = {
@@ -155,7 +196,8 @@ const getInitialValues = (customer) => {
     skills: [],
     time: ['just now'],
     date: '',
-    dueDate: null
+    dueDate: null,
+    additionalServices: [] // Добавим новое поле для дополнительных услуг
   };
 
   if (customer) {
@@ -202,6 +244,97 @@ export default function FormCustomerAdd({ customer, closeModal }) {
   const [avatar, setAvatar] = useState(
     getImageUrl(`avatar-${customer && customer !== null && customer?.avatar ? customer.avatar : 1}.png`, ImagePath.USERS)
   );
+
+  // Состояние для отслеживания выбранных дополнительных услуг
+  const [additionalServices, setAdditionalServices] = useState([]);
+  
+  // Состояние для отслеживания Alert диалога
+  const [openAlert, setOpenAlert] = useState(false);
+
+  // Формик и все хуки, которые должны выполняться всегда
+  const formik = useFormik({
+    initialValues: getInitialValues(customer),
+    validationSchema: CustomerSchema,
+    enableReinitialize: true,
+    onSubmit: async (values, { setSubmitting }) => {
+      try {
+        // Логируем все значения для отладки
+        console.log('Form submitted with values:', values);
+        console.log('Category value:', values.category);
+        
+        let newCustomer = values;
+        newCustomer.name = newCustomer.firstName + ' ' + newCustomer.lastName;
+
+        if (customer) {
+          updateCustomer(newCustomer.id, newCustomer).then(() => {
+            openSnackbar({
+              open: true,
+              message: 'Customer update successfully.',
+              variant: 'alert',
+
+              alert: {
+                color: 'success'
+              }
+            });
+            setSubmitting(false);
+            closeModal();
+          });
+        } else {
+          await insertCustomer(newCustomer).then(() => {
+            openSnackbar({
+              open: true,
+              message: 'Customer added successfully.',
+              variant: 'alert',
+
+              alert: {
+                color: 'success'
+              }
+            });
+            setSubmitting(false);
+            closeModal();
+          });
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  });
+
+  const { errors, touched, handleSubmit, isSubmitting, getFieldProps, setFieldValue } = formik;
+
+  // Расчет общего размера файлов
+  const totalFileSize = useMemo(() => {
+    if (!formik.values.files || !formik.values.files.length) return 0;
+    return formik.values.files.reduce((total, file) => total + (file.size || 0), 0);
+  }, [formik.values.files]);
+
+  // Расчет базовой стоимости в зависимости от размера файлов
+  const basePrice = useMemo(() => {
+    if (totalFileSize === 0) return 3000;
+    const sizeInMB = totalFileSize / (1024 * 1024);
+    const extraSize = Math.max(0, sizeInMB - 250);
+    const extraFee = Math.ceil(extraSize / 250) * 3000;
+    return 3000 + extraFee;
+  }, [totalFileSize]);
+
+  // Расчет стоимости дополнительных услуг
+  const additionalPrice = useMemo(() => {
+    return additionalServices.reduce((total, serviceId) => {
+      return total + (SERVICE_PRICES[serviceId] || 0);
+    }, 0);
+  }, [additionalServices]);
+
+  // Общая стоимость
+  const totalPrice = useMemo(() => {
+    return basePrice + additionalPrice;
+  }, [basePrice, additionalPrice]);
+
+  // Проверка наличия файлов
+  const hasFiles = useMemo(() => {
+    return formik.values.files && formik.values.files.length > 0;
+  }, [formik.values.files]);
+  
+  // ... existing useEffect и callback функции с хуками ...
 
   useEffect(() => {
     if (selectedImage) {
@@ -281,6 +414,13 @@ export default function FormCustomerAdd({ customer, closeModal }) {
     fetchMembers(1, {});
   }, [fetchMembers]);
 
+  // ... existing helper functions без хуков ...
+
+  const handleAlertClose = () => {
+    setOpenAlert(!openAlert);
+    closeModal();
+  };
+
   // Интеллектуальный анализ поискового запроса
   const parseSearchQuery = (query) => {
     // Очищаем строку от лишних пробелов и приводим к нижнему регистру
@@ -343,74 +483,22 @@ export default function FormCustomerAdd({ customer, closeModal }) {
     }
   };
 
-  const CustomerSchema = Yup.object().shape({
-    name: Yup.string().max(255).required('Название обязательно'),
-    type: Yup.string().required('Тип обязательно указать'),
-    category: Yup.string(),
-    firstName: Yup.string().max(255).required('First Name is required'),
-    lastName: Yup.string().max(255).required('Last Name is required'),
-    email: Yup.string().max(255).required('Email is required').email('Must be a valid email'),
-    status: Yup.string().required('Status is required'),
-    location: Yup.string().max(500),
-    about: Yup.string().max(500)
-  });
-
-  const [openAlert, setOpenAlert] = useState(false);
-
-  const handleAlertClose = () => {
-    setOpenAlert(!openAlert);
-    closeModal();
+  // Новая функция для обработки изменения категории
+  const handleCategoryChange = (event) => {
+    console.log('Selected category:', event.target.value);
+    setFieldValue('category', event.target.value);
   };
 
-  const formik = useFormik({
-    initialValues: getInitialValues(customer),
-    validationSchema: CustomerSchema,
-    enableReinitialize: true,
-    onSubmit: async (values, { setSubmitting }) => {
-      try {
-        // Логируем все значения для отладки
-        console.log('Form submitted with values:', values);
-        console.log('Category value:', values.category);
-        
-        let newCustomer = values;
-        newCustomer.name = newCustomer.firstName + ' ' + newCustomer.lastName;
-
-        if (customer) {
-          updateCustomer(newCustomer.id, newCustomer).then(() => {
-            openSnackbar({
-              open: true,
-              message: 'Customer update successfully.',
-              variant: 'alert',
-
-              alert: {
-                color: 'success'
-              }
-            });
-            setSubmitting(false);
-            closeModal();
-          });
-        } else {
-          await insertCustomer(newCustomer).then(() => {
-            openSnackbar({
-              open: true,
-              message: 'Customer added successfully.',
-              variant: 'alert',
-
-              alert: {
-                color: 'success'
-              }
-            });
-            setSubmitting(false);
-            closeModal();
-          });
-        }
-      } catch (error) {
-        console.error(error);
-      }
+  // Обработчик изменения дополнительных услуг
+  const handleServiceChange = (serviceId, checked) => {
+    if (checked) {
+      setAdditionalServices(prev => [...prev, serviceId]);
+      setFieldValue('additionalServices', [...additionalServices, serviceId]);
+    } else {
+      setAdditionalServices(prev => prev.filter(id => id !== serviceId));
+      setFieldValue('additionalServices', additionalServices.filter(id => id !== serviceId));
     }
-  });
-
-  const { errors, touched, handleSubmit, isSubmitting, getFieldProps, setFieldValue } = formik;
+  };
 
   if (loading)
     return (
@@ -463,12 +551,6 @@ export default function FormCustomerAdd({ customer, closeModal }) {
       // Если дошли до сюда, значит другая ошибка
       throw error;
     }
-  };
-
-  // Новая функция для обработки изменения категории
-  const handleCategoryChange = (event) => {
-    console.log('Selected category:', event.target.value);
-    setFieldValue('category', event.target.value);
   };
 
   return (
@@ -793,34 +875,143 @@ export default function FormCustomerAdd({ customer, closeModal }) {
                   </Stack>
                 </Grid>
               
-                <Grid item xs={12} md={8}>
-                  <Grid container spacing={3}>
-                   
-  
-
-                    <Grid item xs={12}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Stack spacing={0.5}>
-                          <Typography variant="subtitle1">Make Contact Info Public</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Means that anyone viewing your profile will be able to see your contacts details
-                          </Typography>
-                        </Stack>
-                        <FormControlLabel control={<Switch defaultChecked sx={{ mt: 0 }} />} label="" labelPlacement="start" />
-                      </Stack>
-                      <Divider sx={{ my: 2 }} />
-                      <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                        <Stack spacing={0.5}>
-                          <Typography variant="subtitle1">Available to hire</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Toggling this will let your teammates know that you are available for acquiring new projects
-                          </Typography>
-                        </Stack>
-                        <FormControlLabel control={<Switch sx={{ mt: 0 }} />} label="" labelPlacement="start" />
-                      </Stack>
-                    </Grid>
-                  </Grid>
+                {/* Блок услуг и оплаты */}
+                <Grid item xs={12}>
+                  <Stack spacing={1}>
+                    <InputLabel>Основные услуги</InputLabel>
+                    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                      <FormControlLabel
+                        control={<Switch checked={true} disabled />}
+                        label={
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                            <Typography variant="body1">{SERVICE_NAMES[SERVICES.ELECTRONIC_RU]}</Typography>
+                            <Typography variant="body1">{SERVICE_PRICES[SERVICES.ELECTRONIC_RU]} руб.</Typography>
+                          </Box>
+                        }
+                        sx={{ width: '100%', m: 0, mb: 0.5 }}
+                      />
+                    </Box>
+                  </Stack>
                 </Grid>
+                
+                {hasFiles && (
+                  <Grid item xs={12}>
+                    <Stack spacing={1}>
+                      <InputLabel>Дополнительные</InputLabel>
+                      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                        <Stack spacing={1.5}>
+                          <FormControlLabel
+                            control={
+                              <Switch 
+                                checked={additionalServices.includes(SERVICES.ELECTRONIC_EN)}
+                                onChange={(e) => handleServiceChange(SERVICES.ELECTRONIC_EN, e.target.checked)}
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                <Typography variant="body1">{SERVICE_NAMES[SERVICES.ELECTRONIC_EN]}</Typography>
+                                <Typography variant="body1">{SERVICE_PRICES[SERVICES.ELECTRONIC_EN]} руб.</Typography>
+                              </Box>
+                            }
+                            sx={{ width: '100%', m: 0 }}
+                          />
+                          
+                          <FormControlLabel
+                            control={
+                              <Switch 
+                                checked={additionalServices.includes(SERVICES.PRINTED_EN)}
+                                onChange={(e) => handleServiceChange(SERVICES.PRINTED_EN, e.target.checked)}
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                <Typography variant="body1">{SERVICE_NAMES[SERVICES.PRINTED_EN]}</Typography>
+                                <Typography variant="body1">{SERVICE_PRICES[SERVICES.PRINTED_EN]} руб.</Typography>
+                              </Box>
+                            }
+                            sx={{ width: '100%', m: 0 }}
+                          />
+                          
+                          <FormControlLabel
+                            control={
+                              <Switch 
+                                checked={additionalServices.includes(SERVICES.PRINTED_RU)}
+                                onChange={(e) => handleServiceChange(SERVICES.PRINTED_RU, e.target.checked)}
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                <Typography variant="body1">{SERVICE_NAMES[SERVICES.PRINTED_RU]}</Typography>
+                                <Typography variant="body1">{SERVICE_PRICES[SERVICES.PRINTED_RU]} руб.</Typography>
+                              </Box>
+                            }
+                            sx={{ width: '100%', m: 0 }}
+                          />
+                          
+                          <FormControlLabel
+                            control={
+                              <Switch 
+                                checked={additionalServices.includes(SERVICES.CERTIFIED_COPY)}
+                                onChange={(e) => handleServiceChange(SERVICES.CERTIFIED_COPY, e.target.checked)}
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                <Typography variant="body1">{SERVICE_NAMES[SERVICES.CERTIFIED_COPY]}</Typography>
+                                <Typography variant="body1">{SERVICE_PRICES[SERVICES.CERTIFIED_COPY]} руб.</Typography>
+                              </Box>
+                            }
+                            sx={{ width: '100%', m: 0 }}
+                          />
+                          
+                          <FormControlLabel
+                            control={
+                              <Switch 
+                                checked={additionalServices.includes(SERVICES.CONFIRMATION_LETTER)}
+                                onChange={(e) => handleServiceChange(SERVICES.CONFIRMATION_LETTER, e.target.checked)}
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                                <Typography variant="body1">{SERVICE_NAMES[SERVICES.CONFIRMATION_LETTER]}</Typography>
+                                <Typography variant="body1">{SERVICE_PRICES[SERVICES.CONFIRMATION_LETTER]} руб.</Typography>
+                              </Box>
+                            }
+                            sx={{ width: '100%', m: 0 }}
+                          />
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </Grid>
+                )}
+                
+                {hasFiles && (
+                  <Grid item xs={12}>
+                    <Stack spacing={1}>
+                      <InputLabel>Способ оплаты</InputLabel>
+                      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                        <FormControlLabel
+                          control={<Radio checked={true} />}
+                          label="Яндекс.Касса (Visa, MasterCard, Мир, Яндекс.Деньги, Наличные, Qiwi)"
+                          sx={{ width: '100%', m: 0 }}
+                        />
+                      </Box>
+                    </Stack>
+                  </Grid>
+                )}
+                
+                {hasFiles && (
+                  <Grid item xs={12}>
+                    <Stack spacing={1}>
+                      <InputLabel>Итого</InputLabel>
+                      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          {totalPrice} руб.
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Grid>
+                )}
               </Grid>
             </DialogContent>
             <Divider />
